@@ -123,7 +123,7 @@ def get_args():
         help='environment to train on (default: PooyanNoFrameskip-v4)')
     parser.add_argument(
         '--log-dir',
-        default='/lab/kiran/tmp/gym/',
+        default='/lab/kiran/BeoEnv/logs',
         help='directory to save agent logs (default: /tmp/gym)')
     parser.add_argument(
         '--save-dir',

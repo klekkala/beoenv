@@ -23,13 +23,14 @@ args = get_args()
 
 @ray.remote(num_gpus=1)
 def atari(env):
-
+   
+    args.env_name = env
     eval('setattr(torch.backends.cudnn, "benchmark", False)')
     eval('setattr(torch.backends.cudnn, "deterministic", True)')
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
 
-    log_dir = os.path.expanduser(args.log_dir)
+    log_dir = os.path.expanduser(args.log_dir + "/" + args.env_name)
     eval_log_dir = log_dir + "_eval"
     utils.cleanup_log_dir(log_dir)
     utils.cleanup_log_dir(eval_log_dir)
@@ -38,7 +39,7 @@ def atari(env):
     device = torch.device("cuda:0" if args.cuda else "cpu")
 
     envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
-                         args.gamma, args.log_dir, device, False)
+                         args.gamma, log_dir, device, False)
 
     actor_critic = Policy(
         envs.observation_space.shape,
