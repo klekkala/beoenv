@@ -22,7 +22,7 @@ from evaluation import evaluate
 args = get_args()
 
 @ray.remote(num_gpus=1)
-def atari(env):
+def atari(env, model_path=None):
    
     args.env_name = env
     eval('setattr(torch.backends.cudnn, "benchmark", False)')
@@ -41,10 +41,17 @@ def atari(env):
     envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
                          args.gamma, log_dir, device, False)
 
-    actor_critic = Policy(
-        envs.observation_space.shape,
-        envs.action_space,
-        base_kwargs={'recurrent': False})
+    if init_model:
+        actor_critic, obs_rms = \
+                torch.load(model_path,
+                        map_location=device)
+
+    else:
+        actor_critic = Policy(
+            envs.observation_space.shape,
+            envs.action_space,
+            base_kwargs={'recurrent': False})
+
     actor_critic.to(device)
 
     

@@ -175,6 +175,7 @@ class CNNBase(NNBase):
         #os.environ["CUDA_VISIBLE_DEVICES"] = "1"
         device = torch.device("cuda")
 
+        #PLEASE CHANGE THE HARDCODED MODEL PATH
         self.main = VAE(channel_in=3, ch=64).to(device)
         checkpoint = torch.load("/lab/kiran/models/atari/" + "STL10_ATTARI_64.pt" , map_location="cpu")
         self.main.load_state_dict(checkpoint['model_state_dict'])
@@ -198,7 +199,7 @@ class CNNBase(NNBase):
         with torch.no_grad():
             mod_x = self.main(mod_input / 255.0)[1].detach()
             x = torch.reshape(mod_x, (inputs.shape[0], 2048))
-
+            print(x)
         if self.is_recurrent:
             x, rnn_hxs = self._forward_gru(x, rnn_hxs, masks)
 

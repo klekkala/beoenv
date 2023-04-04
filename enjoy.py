@@ -25,7 +25,7 @@ parser.add_argument(
     help='environment to train on (default: PongNoFrameskip-v4)')
 parser.add_argument(
     '--load-dir',
-    default='./trained_models/',
+    default='/lab/kiran/trained_models/ppo/',
     help='directory to save agent logs (default: ./trained_models/)')
 parser.add_argument(
     '--non-det',
@@ -53,8 +53,6 @@ actor_critic, obs_rms = \
             torch.load(os.path.join(args.load_dir, args.env_name + ".pt"),
                         map_location='cpu')
 
-from IPython import embed
-embed()
 
 vec_norm = get_vec_normalize(env)
 if vec_norm is not None:
