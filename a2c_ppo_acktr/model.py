@@ -199,7 +199,6 @@ class CNNBase(NNBase):
         with torch.no_grad():
             mod_x = self.main(mod_input / 255.0)[1].detach()
             x = torch.reshape(mod_x, (inputs.shape[0], 2048))
-            print(x)
         if self.is_recurrent:
             x, rnn_hxs = self._forward_gru(x, rnn_hxs, masks)
 

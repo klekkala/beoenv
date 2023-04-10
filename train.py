@@ -41,7 +41,8 @@ def atari(env, model_path=None):
     envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
                          args.gamma, log_dir, device, False)
 
-    if init_model:
+    if model_path:
+        print("Loading model from ", model_path)
         actor_critic, obs_rms = \
                 torch.load(model_path,
                         map_location=device)

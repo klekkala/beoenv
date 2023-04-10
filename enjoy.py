@@ -75,15 +75,15 @@ if args.env_name.find('Bullet') > -1:
     for i in range(p.getNumBodies()):
         if (p.getBodyInfo(i)[0].decode() == "torso"):
             torsoId = i
-
+count = 0
 while True:
+    count += 1
     with torch.no_grad():
         value, action, _, recurrent_hidden_states = actor_critic.act(
             obs, recurrent_hidden_states, masks, deterministic=args.det)
-
     # Obser reward and next obs
     obs, reward, done, _ = env.step(action)
-
+    
     masks.fill_(0.0 if done else 1.0)
 
     if args.env_name.find('Bullet') > -1:
