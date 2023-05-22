@@ -1,0 +1,5 @@
+tmux new-session -d sudo docker run --rm --privileged --gpus all --net=host -v /tmp/.X11-unix:/tmp/.X11-unix:rw carlasim/carla:0.9.13 /bin/bash ./CarlaUE4.sh -RenderOffScreen
+
+
+docker ps
+docker kill
