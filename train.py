@@ -35,17 +35,25 @@ args = parser.parse_args()
 
 #Only 4 functions
 # each_env
-# all_env
+# seq_env uses each_env in a for loop
+# all_env: depends on the prtr, adapter, policy modules.. you train in a specific way.
 
 #use_lstm needs to be incorporated here
 
 
+
+#Generic train fucntion that is used across all the below setups
+
+#list of envs, what is the backbone, 
 #No Sequential transfer. Single task on all envs.
-def train_singleenv(env, prtr, setting, str_logger):
+def train_using_rllib(envclass, config, prtr=None, adapter=None, policy=None):
 
     algo = PPO(config=config)
     #get adapter and policy from setting.
     # run manual training loop and print results after each iteration
+
+    #you need to load the weights into the model here!
+
     for _ in range(args.stop_timesteps):
         result = algo.train()
         print(pretty_print(result))
@@ -57,46 +65,106 @@ def train_singleenv(env, prtr, setting, str_logger):
     algo.stop()
 
 
-#No Sequential transfer. Multi task on all envs
 
-#envs -> list
+
+
+#Train singleenv.
+
+#Generic train fucntion that is used across all the below setups
+
+#list of envs, what is the backbone, 
+#No Sequential transfer. Single task on all envs.
+#TECHNICALY, TRAINING THE ENTIRE MODEL ON ALL THE ENVIRONMENTS
+#IS ALSO SINGLEENV
+def train_singleenv(env, prtr, setting, str_logger):
+
+
+    # modify atari_config to incorporate multienv
+    #config.env_name
+
+
+    #the catalogue is fixed.
+    #The architecture of the entire model stays the same
+
+    #construct the environment
+    envclass = 
+
+    #construct the spec based on the environment/tasks
+    SingleAgentspec = 
+
+
+    #pick the config based on environments and tasks
+    .rl_module_spec = SingleAgentspec
+    config = something
+
+    train_using_rllib(envclass, config, prtr, adapter, policy)
+
+
+
+
+
+
+"""
+NOT YET IMPLEMENTED, WAITING FOR RLLIB BUG TO GET FIXED
+#No Sequential transfer. Multi task on all envs
+#envs -> list of envs
 #str_logger -> string
 #prtr -> my_model (in the form of ckpt)
-#adapter -> ckpt
-#policy -> ckpt
+#adapter -> ckpt/new model
+#policy -> ckpt/new model
 def train_multienv(envs, str_logger, prtr=None, adapter=None, policy=None)
 
     # modify atari_config to incorporate multienv
     #config.env_name
 
 
-    algo = PPO(config=config)
-    # run manual training loop and print results after each iteration
-    for _ in range(args.stop_timesteps):
-        result = algo.train()
-        print(pretty_print(result))
-        # stop training of the target train steps or reward are reached
-        if result["timesteps_total"] >= args.stop_timesteps:
-            policy = algo.get_policy()
-            policy.export_checkpoint("./tmp/atari_checkpoint")
-            break
-    algo.stop()
+    #the catalogue is fixed.
+    #The architecture of the entire model stays the same
+
+    #construct the environment
+    envclass = depend_on_the_env_pick()
+
+    #construct the spec based on the environment/tasks
+    MultiAgentspec = 
+
+    #pick the config based on environments and tasks
+    train_using_rllib(envclass, config, prtr, adapter, policy)
+"""
+
 
 
 
 #sequential learning
 #this function reuses the train_singleenv function
 def seqtrain_singleenv(env, prtr, adapter, policy, str_logger):
-    if env!=envs[0]:
-        my_restored_policy = Policy.from_checkpoint("./tmp/atari_checkpoint")
-        policy=algo.get_policy()
-        policy.set_weights(my_restored_policy.get_weights())
-    for each in blah:
-        
-        train_singleenv()
+
+    # modify atari_config to incorporate multienv
+    #config.env_name
+
+
+    #the catalogue is fixed.
+    #The architecture of the entire model stays the same
+
+    #construct the environment
+    envclass = depend_on_the_env_pick()
+
+    #construct the spec based on the environment/tasks
+    SingleAgentspec = 
+
+
+    #pick the config based on environments and tasks
+    .rl_module_spec = SingleAgentspec
+    config = something
+
+
+    #In the forloop base config and spec stays the same
+    for each in all:
         if env!=envs[0]:
+            
+            #config override new game in the environment.. set it in the env_parameters
+            #in the for loop set the previous models weights
             my_restored_policy = Policy.from_checkpoint("./tmp/atari_checkpoint")
-            model, adapter, policy=algo.get_policy()
+            policy=algo.get_policy()
             policy.set_weights(my_restored_policy.get_weights())
 
-    algo.stop()
+        train_singleenv()

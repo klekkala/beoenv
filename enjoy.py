@@ -1,97 +1,70 @@
-import argparse
-import os
-# workaround to unpickle olf model files
-import sys
-
+import gym
 import numpy as np
-import torch
-
-from a2c_ppo_acktr.envs import VecPyTorch, make_vec_envs
-from a2c_ppo_acktr.utils import get_render_func, get_vec_normalize
-
-sys.path.append('a2c_ppo_acktr')
-
-parser = argparse.ArgumentParser(description='RL')
-parser.add_argument(
-    '--seed', type=int, default=1, help='random seed (default: 1)')
-parser.add_argument(
-    '--log-interval',
-    type=int,
-    default=10,
-    help='log interval, one log per n updates (default: 10)')
-parser.add_argument(
-    '--env-name',
-    default='PongNoFrameskip-v4',
-    help='environment to train on (default: PongNoFrameskip-v4)')
-parser.add_argument(
-    '--load-dir',
-    default='/lab/kiran/trained_models/ppo/',
-    help='directory to save agent logs (default: ./trained_models/)')
-parser.add_argument(
-    '--non-det',
-    action='store_true',
-    default=False,
-    help='whether to use a non-deterministic policy')
-args = parser.parse_args()
-
-args.det = not args.non_det
-
-env = make_vec_envs(
-    args.env_name,
-    args.seed + 1000,
-    1,
-    None,
-    None,
-    device='cpu',
-    allow_early_resets=False)
-
-# Get a render function
-render_func = get_render_func(env)
-
-# We need to use the same statistics for normalization as used in training
-actor_critic, obs_rms = \
-            torch.load(os.path.join(args.load_dir, args.env_name + ".pt"),
-                        map_location='cpu')
+from ray.rllib.policy.policy import Policy
+from ray.rllib.algorithms.algorithm import Algorithm
+import cv2 
+my_restored_policy = Policy.from_checkpoint("./testatari/atari_checkpoint/")
 
 
-vec_norm = get_vec_normalize(env)
-if vec_norm is not None:
-    vec_norm.eval()
-    vec_norm.obs_rms = obs_rms
+class MultiTaskEnv(gym.Env):
+        def __init__(self, env_config):
+            self.env = gym.make("NameThisGameNoFrameskip-v4", full_action_space=True)
+            self.name= "NameThisGameNoFrameskip-v4"
+            #self.env = wrap_deepmind(self.env)
+            self.action_space = self.env.action_space
+            self.observation_space = gym.spaces.Box(0, 255, (84, 84, 3), np.uint8) #self.env.observation_space
+            #if self.observation_space.shape[0]==214:
+                #self.observation_space = gym.spaces.Box(0, 255, (210, 160, 3), np.uint8)
 
-recurrent_hidden_states = torch.zeros(1,
-                                      actor_critic.recurrent_hidden_state_size)
-masks = torch.zeros(1, 1)
+        def reset(self):
+            temp = self.env.reset()
+            if isinstance(temp, np.ndarray):
+                return cv2.resize(temp, (84, 84))
+            #if str(type(temp))!='tuple':
+                #return cv2.resize(temp, (84, 84))
+            temp=list(temp)
+            temp[0] = cv2.resize(temp[0], (84, 84))
+            #res = tuple((cv2.resize(temp[0], (84, 84)),temp[1]))
+            return tuple(temp)
 
-obs = env.reset()
+        def step(self, action):
+            temp = self.env.step(action)
+            if isinstance(temp, np.ndarray):
+                return cv2.resize(temp, (84, 84))
+            temp=list(temp)
+            temp[0] = cv2.resize(temp[0], (84, 84))
+            return tuple(temp)
 
-if render_func is not None:
-    render_func('human')
 
-if args.env_name.find('Bullet') > -1:
-    import pybullet as p
+def reset(env):
+    temp = env.reset()
+    if isinstance(temp, np.ndarray):
+        return cv2.resize(temp, (84, 84))
+            #if str(type(temp))!='tuple':
+                #return cv2.resize(temp, (84, 84))
+    temp=list(temp)
+    temp[0] = cv2.resize(temp[0], (84, 84))
+            #res = tuple((cv2.resize(temp[0], (84, 84)),temp[1]))
+    return 
 
-    torsoId = -1
-    for i in range(p.getNumBodies()):
-        if (p.getBodyInfo(i)[0].decode() == "torso"):
-            torsoId = i
-count = 0
-while True:
-    count += 1
-    with torch.no_grad():
-        value, action, _, recurrent_hidden_states = actor_critic.act(
-            obs, recurrent_hidden_states, masks, deterministic=args.det)
-    # Obser reward and next obs
-    obs, reward, done, _ = env.step(action)
-    
-    masks.fill_(0.0 if done else 1.0)
+res=[]
 
-    if args.env_name.find('Bullet') > -1:
-        if torsoId > -1:
-            distance = 5
-            yaw = 0
-            humanPos, humanOrn = p.getBasePositionAndOrientation(torsoId)
-            p.resetDebugVisualizerCamera(distance, yaw, -20, humanPos)
+env = gym.make("NameThisGameNoFrameskip-v4", full_action_space=True)
+rounds=50
+for i in range(rounds):
+    total=0
+    obs = env.reset()
+    obs = cv2.resize(obs, (84, 84))
+    for q in range(1000):
+        action = my_restored_policy.compute_single_action(obs)[0]
+        obs, reward, done, _ = env.step(action)
+        obs = cv2.resize(obs, (84, 84))
+        total+=reward
+        if done:
+            break
+    res.append(total)
+average = sum(res) / len(res)
+print(average)
+with open('Name.txt','w') as f:
+    f.write(str(res))
 
-    if render_func is not None:
-        render_func('human')

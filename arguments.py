@@ -1,7 +1,8 @@
 import argparse
 import torch
 
-
+#(args.backbone, args.setting, args.trainset, args.expname)
+#if its e2e.. then the gradients flow through the backbone during training
 def get_args():
     parser = argparse.ArgumentParser(description='RL')
     #parser = argparse.ArgumentParser()
@@ -30,10 +31,10 @@ def get_args():
         "--env_name", type=str, default="ALE/Pong-v5", help="ALE/Pong-v5"
     )
     parser.add_argument(
-        "--trainset", type=str, choices=["all", "set"], default="ALE/Pong-v5", help="ALE/Pong-v5"
+        "--set", type=str, choices=["all", "trainset", "testset"], default="ALE/Pong-v5", help="ALE/Pong-v5"
     )
     parser.add_argument(
-        "--setting", type=str, choices=["eachgame", "seqgame"], default="ALE/Pong-v5", help="ALE/Pong-v5"
+        "--setting", type=str, choices=["eachgame", "seqgame", "allgame"], default="ALE/Pong-v5", help="ALE/Pong-v5"
     )
     parser.add_argument(
         "--expname", type=str, choices=["adapter", "adapterpolicy", "policy", "corl23"], default="ALE/Pong-v5", help="ALE/Pong-v5"

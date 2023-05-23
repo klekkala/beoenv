@@ -5,7 +5,7 @@ from ray.rllib.env import BaseEnv
 from typing import Dict, Tuple
 from ray.rllib.policy.policy import Policy
 
-##MultiTask, MultiEnv classes and their related classes/functions
+##SingleTask, MultiTask, MultiEnv classes and their related classes/functions
 
 class CusEnv(gym.Env):
     def __init__(self,env_config):
@@ -104,12 +104,61 @@ class MultiSync(MultiAgentEnv):
 
 
 
+class Beogym(MultiAgentEnv):
+
+    def __init__(self,num):
+        self.agents=[]
+        for i in range(len(envs)):
+            self.agents.append(gym.make(envs[i], full_action_space=True))
+        self.terminateds = set()
+        self.truncateds = set()
+        self.action_space = gym.spaces.Discrete(18)
+        self.observation_space = gym.spaces.Box(0, 255, (84, 84, 3), np.uint8)
+        self.resetted = False
+
+    def reset(self, *, seed=None, options=None):
+        res={}
+        info={}
+        self.resetted = True
+        self.terminateds = set()
+        self.truncateds = set()
+        for i in range(len(envs)):
+            temp,info = self.agents[i].reset()
+            temp = cv2.resize(temp, (84, 84))
+            res[i]=temp
+            info[i] = info
+        return res,info
+
+    def step(self, action_dict):
+        obs, rew, terminated, truncated, info = {}, {}, {}, {}, {}
+        for i, action in action_dict.items():
+            temp = self.agents[i].step(action)
+            temp=list(temp)
+            temp[0] = cv2.resize(temp[0], (84, 84))
+            obs[i], rew[i], terminated[i], truncated[i], info[i] = temp
+            if terminated[i]:
+                self.terminateds.add(i)
+            if truncated[i]:
+                self.truncateds.add(i)
+
+        terminated["__all__"] = len(self.terminateds) == len(self.agents)
+        truncated["__all__"] = len(self.truncateds) == len(self.agents)
+        return obs, rew, terminated, truncated, info
 
 
 
 
+"""
+class CarlaSingle(gym.Env)
+class CarlaMulti(gym.Env)
+class CarlaMultiSync(MultiAgentEnv)
+"""
 
 
+
+
+"""
+Henghui: Why is this class used?
 class MyCallbacks(DefaultCallbacks):
     def on_episode_end(
     self,
@@ -132,3 +181,4 @@ class MyCallbacks(DefaultCallbacks):
                 "after episode is done!"
             )
         episode.custom_metrics[base_env.vector_env.envs[0].name] = episode.total_reward
+"""

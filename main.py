@@ -45,6 +45,7 @@ if __name__ == "__main__":
         with open(args.config, 'r') as cfile:
             config_data = yaml.safe_load(cfile)
 
+    #update the args in the config.py file
     args.num_workers, args.num_envs, args.num_gpus, args.gpus_worker, args.cpus_worker, args.roll_frags = config_data[args.machine]
     
     ray.init(local_mode=args.local_mode)
@@ -57,41 +58,80 @@ if __name__ == "__main__":
 
     #training, once finished, save the logs
     
-    if mode == train:
+
+
+    #construct the model
+
+    #if gradients flow through the backbone or a pretrained backbone is loaded and frozen
+
+
+    #if the policy/adapter/policy+adapter is swappable
+
+
+    #what is the training paradigm.. how is it trained on what games
+
+
+    if args.train:
+
         #if the program is run for all the games independently
+        #and so you run the training procedure independently across all the games
         if args.setting == 'eachgame':
             #get the list of train or test environments from args.trainset
 
-            for each game:            
+            for each game:
                 #env, prtr_model, str_logger
-                if args.expname == 'adapter':
-                    train.train_singletask(envs, args.prtr, args.expname, str_logger)
-                
-                elif args.expname == 'adapterpolicy':
-                    lkajsdlfkj
-                
-                elif args.expname == 'policy':
-                    lkajsdlkj
+                #in this case you create a new adapter
+                #policy,backbone stays fixed (pretrained/train)
+                #if args.expname == 'adapter':
+
+                #E2E PRETRAINED BACKBONE
+                train.train_singletask(envs, args.prtr, args.expname, str_logger)
+                #FIXED PRETRAINED BACKBONE
+                train.train_singletask(envs, args.prtr, args.expname, str_logger)
+                #FIXED PRETRAINED BACKBONE AND POLICY
+                train.train_singletask(envs, args.prtr, args.expname, str_logger)
+
         
 
 
 
-        #if its all games
-        elif args.setting == 'allgames' and args.expname == 'full':
-            if ** == experiment:
-                train.multi_env(envs, args.prtr, args.expname, str_logger)
-            
-            elif ** == experiment:
-                lkajsdlfkj
-            
-            else:
-                lkajsdlkj
+        #if the games are trained sequentially
+        #if args.setting is 'seq_game'.
+        #Assumption: everytime its looped across all games
+        elif args.setting == 'seqgame':
+
+            #baseline 2.a: model is trained e2e, sequentially across allgames
+            #expname == 'full', E2E through all envs
+            train.seq_single_env()
+            #baseline 2.b pretrained frozen backbone.. only adapter+policy trained
+            train.seq_single_env()
+            #Our Method
+            #train.seq_single_env()
 
 
-        #if its seq games
+        #if its all games and the model is trained e2e
+        #for now only the entire model trained on allgames or setgames is implemented
         else:
-            if args.expname == 'full':
-                train.seq_single_env()
+
+            #if you want to run the entire model e2e on multiple envs
+            if ** == experiment:
+                #baseline setenvs vs allenvs
+                #baseline full vs prtr backbone
+                train.single_env(envs, args.prtr, args.expname, str_logger)
+            
+
+
+            """
+            #baseline 2.b
+            #baseline 2.c
+            else:
+                
+            """
+
+
+
+
+
 
 
 
@@ -100,6 +140,15 @@ if __name__ == "__main__":
         if args.expname == 'singletask':
             tune.train_singletask(env, end_cond)
 
-    if mode == eval:
+
+
+
+
+
+
+
+
+
+    if args.eval:
         #evaluation
         enjoy.evaluate()
