@@ -84,14 +84,8 @@ if __name__ == "__main__":
                 #policy,backbone stays fixed (pretrained/train)
                 #if args.expname == 'adapter':
 
-                #E2E PRETRAINED BACKBONE
-                train.train_singletask(envs, args.prtr, args.expname, str_logger)
-                #FIXED PRETRAINED BACKBONE
-                train.train_singletask(envs, args.prtr, args.expname, str_logger)
-                #FIXED PRETRAINED BACKBONE AND POLICY
-                train.train_singletask(envs, args.prtr, args.expname, str_logger)
-
-        
+                #E2E PRETRAINED BACKBONE or FIXED PRETRAINED BACKBONE or FIXED BACKBONE AND POLICY
+                train.train_singletask(args.env_name, args.trainset, args.prtr, args.adapter, args.policy, args.expname, str_logger)
 
 
 
@@ -104,7 +98,6 @@ if __name__ == "__main__":
             #expname == 'full', E2E through all envs
             train.seq_single_env()
             #baseline 2.b pretrained frozen backbone.. only adapter+policy trained
-            train.seq_single_env()
             #Our Method
             #train.seq_single_env()
 

@@ -1,12 +1,12 @@
 
+from ppotrainer import AtariPPOTorchRLModule, BeoGymPPOTorchRLModule
 
 
-
-def generate_spec(envs, ):
+def generate_spec(envs):
 
     if len(envs) == 1:
         spec = SingleAgentRLModuleSpec(
-            module_class=PPOTorchRLModule,
+            module_class=AtariPPOTorchRLModule,
             #observation_space=gym.spaces.Box(0, 255, (84, 84, 3), np.uint8),
             #action_space=gym.spaces.Discrete(18),
             model_config_dict={"vf_share_layers": True, "encoder_latent_dim": 32,

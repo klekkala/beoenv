@@ -2,7 +2,9 @@ import argparse
 import torch
 
 #(args.backbone, args.setting, args.trainset, args.expname)
-#if its e2e.. then the gradients flow through the backbone during training
+#args.expname only makes sense if args.setting is not allgame
+
+#if args.backbone e2e.. then the gradients flow through the backbone during training
 def get_args():
     parser = argparse.ArgumentParser(description='RL')
     #parser = argparse.ArgumentParser()
@@ -31,7 +33,10 @@ def get_args():
         "--env_name", type=str, default="ALE/Pong-v5", help="ALE/Pong-v5"
     )
     parser.add_argument(
-        "--set", type=str, choices=["all", "trainset", "testset"], default="ALE/Pong-v5", help="ALE/Pong-v5"
+        "--trainset", type=str, choices=["all", "set"], default="ALE/Pong-v5", help="ALE/Pong-v5"
+    )
+    parser.add_argument(
+        "--greyscale", type=bool, choices=[True, False], default=True, help="ALE/Pong-v5"
     )
     parser.add_argument(
         "--setting", type=str, choices=["eachgame", "seqgame", "allgame"], default="ALE/Pong-v5", help="ALE/Pong-v5"
