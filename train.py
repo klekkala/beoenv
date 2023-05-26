@@ -46,7 +46,7 @@ args = parser.parse_args()
 
 #list of envs, what is the backbone, 
 #No Sequential transfer. Single task on all envs.
-def train_using_rllib(envclass, config, adapter=None, policy=None):
+def rllib_loop(envclass, config, adapter=None, policy=None):
 
     #update config to include envclass
 
@@ -71,6 +71,9 @@ def train_using_rllib(envclass, config, adapter=None, policy=None):
 
 
 
+
+
+
 #Train singleenv.
 
 #Generic train fucntion that is used across all the below setups
@@ -79,25 +82,23 @@ def train_using_rllib(envclass, config, adapter=None, policy=None):
 #No Sequential transfer. Single task on all envs.
 #TECHNICALY, TRAINING THE ENTIRE MODEL ON ALL THE ENVIRONMENTS
 #IS ALSO SINGLEENV
-def train_singleenv(env_name, trainset, adapter, policy, expname, str_logger):
+def single_train(env_name, trainset, adapter, policy, expname, str_logger):
 
 
     # modify atari_config to incorporate multienv
     #config.env_name
 
 
-    #the catalogue is fixed.
-    #The architecture of the entire model stays the same
 
-    #construct the environment
+    #construct the environment from envs.py
     envclass = 
 
-    #construct the spec based on the environment/tasks
-    SingleAgentspec = 
-
-
+    #construct the spec based on the environment/tasks (for rl_module api)
+    #SingleAgentspec 
     #pick the config based on environments and tasks
-    .rl_module_spec = SingleAgentspec
+    #.rl_module_spec = SingleAgentspec
+    
+    #do all the config overwrites here
     config = something
 
     train_using_rllib(envclass, config, prtr, adapter, policy)
@@ -106,24 +107,21 @@ def train_singleenv(env_name, trainset, adapter, policy, expname, str_logger):
 
 #sequential learning
 #this function reuses the train_singleenv function
-def seqtrain_singleenv(env_name, trainset, adapter, policy, expname, str_logger):
+def seq_train(env_name, trainset, adapter, policy, expname, str_logger):
 
     # modify atari_config to incorporate multienv
     #config.env_name
 
 
-    #the catalogue is fixed.
-    #The architecture of the entire model stays the same
-
     #construct the environment
     envclass = depend_on_the_env_pick()
 
     #construct the spec based on the environment/tasks
-    SingleAgentspec = 
-
-
+    #SingleAgentspec = 
     #pick the config based on environments and tasks
-    .rl_module_spec = SingleAgentspec
+    #.rl_module_spec = SingleAgentspec
+    specs.generate_specs()
+    
     config = something
 
 

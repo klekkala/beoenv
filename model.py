@@ -1,4 +1,7 @@
 
+#This file contains 2 models singletask, multitask
+
+
 import functools
 from typing import Optional
 
@@ -40,242 +43,152 @@ from ray.rllib.utils.annotations import override
 from ray.rllib.utils.framework import try_import_torch
 from ray.rllib.utils.framework import try_import_torch
 
-torch, nn = try_import_torch()
 
-#from RES_VAE import VAE
-from shellrl.prtrencoder.atari_vae import VAE
-from ray.rllib.core.models.base import ENCODER_OUT
 
-"""
-class ModTorchMLPEncoder(TorchModel, Encoder):
-    def __init__(self, config: MLPEncoderConfig) -> None:
-        TorchModel.__init__(self, config)
-        Encoder.__init__(self, config)
+# The global, shared layer to be used by both models.
+#TORCH_GLOBAL_SHARED_BACKBONE= SlimFC(
+#    64,
+#    64,
+#    activation_fn=nn.ReLU,
+#    initializer=torch.nn.init.xavier_uniform_,
+#)
 
-        # Create the neural network.
-        self.net = TorchMLP(
-            input_dim=config.input_dims[0],
-            hidden_layer_dims=config.hidden_layer_dims,
-            hidden_layer_activation=config.hidden_layer_activation,
-            hidden_layer_use_layernorm=config.hidden_layer_use_layernorm,
-            output_dim=config.output_dims[0],
-            output_activation=config.output_activation,
-            use_bias=config.use_bias,
+TORCH_GLOBAL_SHARED_POLICY = SlimFC(
+    64,
+    64,
+    activation_fn=nn.ReLU,
+    initializer=torch.nn.init.xavier_uniform_,
+)
+
+
+
+#this is class is reused for every game/city/town
+#this is equivalent to a spec in rl_module api
+class TorchSharedWeightsModel(TorchModelV2, nn.Module):
+    """Example of weight sharing between two different TorchModelV2s.
+
+    The shared (single) layer is simply defined outside of the two Models,
+    then used by both Models in their forward pass.
+    """
+
+    def __init__(
+        self, observation_space, action_space, num_outputs, model_config, name
+    ):
+        TorchModelV2.__init__(
+            self, observation_space, action_space, num_outputs, model_config, name
+        )
+        nn.Module.__init__(self)
+
+
+
+
+        # Non-shared initial layer.
+        # this is the adapter
+        self.adapter = SlimFC(
+            int(np.product(observation_space.shape)),
+            64,
+            activation_fn=nn.ReLU,
+            initializer=torch.nn.init.xavier_uniform_,
         )
 
-    @override(Model)
-    def get_input_specs(self) -> Optional[Spec]:
-        return SpecDict(
-            {
-                SampleBatch.OBS: TensorSpec(
-                    "b, d", d=self.config.input_dims[0], framework="torch"
-                ),
-            }
-        )
 
-    @override(Model)
-    def get_output_specs(self) -> Optional[Spec]:
-        return SpecDict(
-            {
-                ENCODER_OUT: TensorSpec(
-                    "b, d", d=self.config.output_dims[0], framework="torch"
-                ),
-            }
-        )
-
-    @override(Model)
-    def _forward(self, inputs: dict, **kwargs) -> dict:
-        return {ENCODER_OUT: self.net(inputs[SampleBatch.OBS])}
-"""
-
-class ModTorchCNNEncoder(TorchModel, Encoder):
-    def __init__(self, config: CNNEncoderConfig) -> None:
-        TorchModel.__init__(self, config)
-        Encoder.__init__(self, config)
-
-        layers = []
-        # The bare-bones CNN (no flatten, no succeeding dense).
-        #print(config.cnn_activation, config.cnn_use_layernorm, config.use_bias)
- 
-        cnn = ModTorchCNN(
-            input_dims=config.input_dims,
-            cnn_filter_specifiers=config.cnn_filter_specifiers,
-            cnn_activation=config.cnn_activation,
-            cnn_use_layernorm=config.cnn_use_layernorm,
-            use_bias=config.use_bias,
-        )
-    
-        #cnn = VAE()
-        #cnn = VAE(channel_in=3, ch=32, z=512)
-        #self.blahencoder = VAE(channel_in=3, ch=32)
-        #print(self.VAE)
-        #checkpoint = torch.load("/lab/kiran/shellrl/prtrencoder/prtrmodels/CONV_ATTARI_84.pt", map_location='cpu')
-        #checkpoint = torch.load("/lab/kiran/ckpts/pretrained/atari/STL10_ATTARI_64.pt", map_location='cpu')
-        #cnn.load_state_dict(checkpoint['model_state_dict'])
-        #cnn.eval()
-        #for param in cnn.parameters():
-        #    param.requires_grad = False
-
-        layers.append(cnn)
-
-        # Add a flatten operation to move from 2/3D into 1D space.
-        layers.append(nn.Flatten())
-
-        # Add a final linear layer to make sure that the outputs have the correct
-        # dimensionality (output_dims).
-        layers.append(
-            nn.Linear(
-                #int(cnn.output_width) * int(cnn.output_height) * int(cnn.output_depth),        
-                30976,
-                #4608,
-                #64,
-                #512,
-                config.output_dims[0]
-            )
-        )
-        output_activation = get_activation_fn(
-            config.output_activation, framework="torch"
-        )
-        if output_activation is not None:
-            layers.append(output_activation())
-
-        # Create the network from gathered layers.
-        self.net = nn.Sequential(*layers)
-
-
-    def get_input_specs(self) -> Optional[Spec]:
-        return SpecDict(
-            {
-                SampleBatch.OBS: TensorSpec(
-                    "b, w, h, c",
-                    w=self.config.input_dims[0],
-                    h=self.config.input_dims[1],
-                    c=self.config.input_dims[2],
-                    framework="torch",
-                ),
-            }
-        )
-
-    def get_output_specs(self) -> Optional[Spec]:
-        return SpecDict(
-            {
-                ENCODER_OUT: TensorSpec(
-                    "b, d", d=self.config.output_dims[0], framework="torch"
-                ),
-            }
-        )
-
-    def _forward(self, inputs: dict, **kwargs) -> dict:
-
-        #return {ENCODER_OUT: self.net(inputs[SampleBatch.OBS].type(torch.float32).permute(0, 3, 1, 2))}
-        return {ENCODER_OUT: self.net(inputs[SampleBatch.OBS])}
-
-
-
-class ModCNNEncoderConfig(CNNEncoderConfig, ModelConfig):
-    """Configuration for a convolutional network."""
-    def build(self, framework: str = "torch") -> Model:
-        self._validate()
-
-        if framework == "torch":
-            #from ray.rllib.core.models.torch.encoder import TorchCNNEncoder
-            #return TorchCNNEncoder(self)
-            return ModTorchCNNEncoder(self)
-            #return ModTorchMLPEncoder(self)
-
-        elif framework == "tf2":
-            from ray.rllib.core.models.tf.encoder import TfCNNEncoder
-
-            return TfCNNEncoder(self)
-
-
-
-
-
-
-# Define a simple catalog that returns our custom distribution when
-# get_action_dist_cls is called
-class CustomPPOCatalog(PPOCatalog):
-    def get_encoder_config(
-        cls,
-        observation_space: gym.Space,
-        model_config_dict: dict,
-        action_space: gym.Space = None,
-        view_requirements=None,
-    ) -> ModelConfig:
-        """Returns an EncoderConfig for the given input_space and model_config_dict.
-
-        Encoders are usually used in RLModules to transform the input space into a
-        latent space that is then fed to the heads. The returned EncoderConfig
-        objects correspond to the built-in Encoder classes in RLlib.
-        For example, for a simple 1D-Box input_space, RLlib offers an
-        MLPEncoder, hence this method returns the MLPEncoderConfig. You can overwrite
-        this method to produce specific EncoderConfigs for your custom Models.
-
-        The following input spaces lead to the following configs:
-        - 1D-Box: MLPEncoderConfig
-        - 3D-Box: CNNEncoderConfig
-        # TODO (Artur): Support more spaces here
-        # ...
-
-        Args:
-            observation_space: The observation space to use.
-            model_config_dict: The model config to use.
-            action_space: The action space to use if actions are to be encoded. This
-                is commonly the case for LSTM models.
-            view_requirements: The view requirements to use if anything else than
-                observation_space or action_space is to be encoded. This signifies an
-                advanced use case.
-
-        Returns:
-            The encoder config.
-        """
-        # TODO (Artur): Make it so that we don't work with complete MODEL_DEFAULTS
-
-
-        # input_space is a 3D Box
-    
-        if (
-            isinstance(observation_space, Box) and len(observation_space.shape) == 3
-        ):
-            if not model_config_dict.get("conv_filters"):
-                model_config_dict["conv_filters"] = get_filter_config(
-                    observation_space.shape
-                )
-
-            encoder_latent_dim = model_config_dict["encoder_latent_dim"]
-            encoder_config = ModCNNEncoderConfig(
-                input_dims=observation_space.shape,
-                cnn_filter_specifiers=model_config_dict["conv_filters"],
-                cnn_activation=model_config_dict["conv_activation"],
-                cnn_use_layernorm=model_config_dict.get(
-                    "conv_use_layernorm", False
-                ),
-                output_dims=[encoder_latent_dim],
-                # TODO (sven): Setting this to None here helps with the existing
-                #  APPO Pong benchmark (actually, leaving this at default=tanh does
-                #  NOT learn at all!).
-                #  We need to remove the last Dense layer from CNNEncoder in general
-                #  AND establish proper ModelConfig objects (instead of hacking
-                #  everything with the old default model config dict).
-                output_activation=None,
-            )
-        """
-        if model_config_dict["encoder_latent_dim"]:
-            hidden_layer_dims = model_config_dict["fcnet_hiddens"]
+        if args.pol:
+            self.pi = TORCH_GLOBAL_SHARED_LAYER
         else:
-            hidden_layer_dims = model_config_dict["fcnet_hiddens"][:-1]
-        encoder_config = MLPEncoderConfig(
-            input_dims=[observation_space.shape[0]],
-            hidden_layer_dims=hidden_layer_dims,
-            hidden_layer_activation=activation,
-            output_dims=[encoder_latent_dim],
-            output_activation=output_activation,
+            self.pi = SlimFC(
+                        64,
+                        64,
+                        activation_fn=nn.ReLU,
+                        initializer=torch.nn.init.xavier_uniform_)
+
+        #value function is always non shared
+        self.vf = SlimFC(
+            64,
+            1,
+            activation_fn=None,
+            initializer=torch.nn.init.xavier_uniform_)
+
+        self._output = None
+
+    @override(ModelV2)
+    def forward(self, input_dict, state, seq_lens):
+        out = self.first_layer(input_dict["obs"])
+        self._output = self._global_shared_layer(out)
+        model_out = self.last_layer(self._output)
+        return model_out, []
+
+    @override(ModelV2)
+    def value_function(self):
+        assert self._output is not None, "must call forward first!"
+        return torch.reshape(self.vf(self._output), [-1])
+
+
+
+
+#this is class is reused for every game/city/town
+#this is equivalent to a spec in rl_module api
+class TorchSingleWeightsModel(TorchModelV2, nn.Module):
+    """Example of weight sharing between two different TorchModelV2s.
+
+    The shared (single) layer is simply defined outside of the two Models,
+    then used by both Models in their forward pass.
+    """
+
+    def __init__(
+        self, observation_space, action_space, num_outputs, model_config, name
+    ):
+        TorchModelV2.__init__(
+            self, observation_space, action_space, num_outputs, model_config, name
         )
-        """
+        nn.Module.__init__(self)
 
-        return encoder_config
+        self.backbone = VAE(3)
+        if args.prtr:
+            self.backbone.load_weights(map_fun(args.prtr))
+            self.backbone.eval()
+            for all params:
+                param.set_param = False
 
+
+        # Non-shared initial layer.
+        # this is the adapter
+        self.adapter = SlimFC(
+            int(np.product(observation_space.shape)),
+            64,
+            activation_fn=nn.ReLU,
+            initializer=torch.nn.init.xavier_uniform_,
+        )
+
+
+        if args.pol:
+            self.pi = TORCH_GLOBAL_SHARED_LAYER
+        else:
+            self.pi = SlimFC(
+                        64,
+                        64,
+                        activation_fn=nn.ReLU,
+                        initializer=torch.nn.init.xavier_uniform_)
+
+        #value function is always non shared
+        self.vf = SlimFC(
+            64,
+            1,
+            activation_fn=None,
+            initializer=torch.nn.init.xavier_uniform_)
+
+        self._output = None
+
+    @override(ModelV2)
+    def forward(self, input_dict, state, seq_lens):
+        out = self.first_layer(input_dict["obs"])
+        self._output = self._global_shared_layer(out)
+        model_out = self.last_layer(self._output)
+        return model_out, []
+
+    @override(ModelV2)
+    def value_function(self):
+        assert self._output is not None, "must call forward first!"
+        return torch.reshape(self.vf(self._output), [-1])
 
 
 

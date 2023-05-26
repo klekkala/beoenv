@@ -17,7 +17,6 @@ train_atari_envs = ["AirRaidNoFrameskip-v4","AssaultNoFrameskip-v4","BeamRiderNo
 test_atari_envs = ["CarnivalNoFrameskip-v4", "NameThisGameNoFrameskip-v4", "PhoenixNoFrameskip-v4"]
 
 
-
 #all_beogym_envs = []
 #train_beogym_envs = []
 #test_beogym_envs = []
@@ -55,6 +54,7 @@ atari_config = {
     }
 
 """
+create beogym_config from atari_config
 beogym_config = {
     "env" : args.env_name,
     "clip_rewards" : True,
@@ -86,36 +86,7 @@ beogym_config = {
     "num_cpus_per_worker":args.cpus_worker
     }
 
-carla_config = {
-    "env" : args.env_name,
-    "clip_rewards" : True,
-    "framework" : "torch",
-    "logger_config": {
-        "type": UnifiedLogger,
-        "logdir": os.path.expanduser(args.log)
-        },
-    "observation_filter":"NoFilter",
-    "num_workers":args.num_workers,
-    "rollout_fragment_length" : args.roll_frags,
-    "num_envs_per_worker" : args.num_envs,
-    "model":{
-            "vf_share_layers" : True,
 
-    },
-    #"lambda_" : args.lambda_,
-    "kl_coeff" : args.kl_coeff,
-    "clip_param" : args.clip_param,
-    "entropy_coeff" : args.entropy_coeff,
-    "gamma" : args.gamma,
-    "vf_clip_param" : args.vf_clip,
-    "train_batch_size":args.buffer_size,
-    "sgd_minibatch_size":args.batch_size,
-    "num_sgd_iter":args.num_epoch,
-    # Use GPUs iff `RLLIB_NUM_GPUS` env var set to > 0.
-    "num_gpus":args.num_gpus,
-    "num_gpus_per_worker" : args.gpus_worker,
-    "num_cpus_per_worker":args.cpus_worker
-    }
 
 
 hyperparam_mutations = {

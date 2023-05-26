@@ -71,6 +71,9 @@ if __name__ == "__main__":
     #what is the training paradigm.. how is it trained on what games
 
 
+    #Before you start training. run evaluate to check how much reward can a random agent do
+    #Towards the end evaluation on the trained games to see the final reward
+
     if args.train:
 
         #if the program is run for all the games independently
@@ -82,10 +85,13 @@ if __name__ == "__main__":
                 #env, prtr_model, str_logger
                 #in this case you create a new adapter
                 #policy,backbone stays fixed (pretrained/train)
-                #if args.expname == 'adapter':
-
+                #if args.expname == 'adapter'
                 #E2E PRETRAINED BACKBONE or FIXED PRETRAINED BACKBONE or FIXED BACKBONE AND POLICY
-                train.train_singletask(args.env_name, args.trainset, args.prtr, args.adapter, args.policy, args.expname, str_logger)
+                #baseline 1.a
+                #baseline 1.c, 1.d
+                #baseline 1.e, 1.f
+                #baseline 3.a.ft, 3.b.ft, 3.c.ft
+                train.single_train(args.env_name, args.trainset, args.prtr, args.adapter, args.policy, args.expname, args.eval, str_logger)
 
 
 
@@ -94,12 +100,12 @@ if __name__ == "__main__":
         #Assumption: everytime its looped across all games
         elif args.setting == 'seqgame':
 
-            #baseline 2.a: model is trained e2e, sequentially across allgames
+            #baseline 2.a
+            #baseline 2.b (same )
+            #baseline 2.c (our method)
             #expname == 'full', E2E through all envs
-            train.seq_single_env()
-            #baseline 2.b pretrained frozen backbone.. only adapter+policy trained
-            #Our Method
-            #train.seq_single_env()
+            train.seq_train(args.env_name, args.trainset, args.prtr, args.adapter, args.policy, args.expname, str_logger)
+
 
 
         #if its all games and the model is trained e2e
@@ -108,40 +114,12 @@ if __name__ == "__main__":
 
             #if you want to run the entire model e2e on multiple envs
             if ** == experiment:
-                #baseline setenvs vs allenvs
-                #baseline full vs prtr backbone
-                train.single_env(envs, args.prtr, args.expname, str_logger)
+                #baseline 1.b (allenvs)
+                #baseline 3.a.tr (setenvs)
+                train.single_train(envs, args.prtr, args.expname, str_logger)
             
+            elif:
+                #baseline 1.c, 1.e, 1.f, 3.c.tr: adapter+policy
+                #baseline 1.d, 3.d.tr, 3.c.tr: policy
+                train.multi_train()
 
-
-            """
-            #baseline 2.b
-            #baseline 2.c
-            else:
-                
-            """
-
-
-
-
-
-
-
-
-        #finetuning, once finished, save the logs
-        #for finetuning end condition is some reward vlaue which needs to be achieved
-        if args.expname == 'singletask':
-            tune.train_singletask(env, end_cond)
-
-
-
-
-
-
-
-
-
-
-    if args.eval:
-        #evaluation
-        enjoy.evaluate()
