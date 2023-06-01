@@ -21,36 +21,40 @@ def get_args():
     )
     
     parser.add_argument(
-        "--machine", type=str, default="None", help="machine to be training"
-    )
-    parser.add_argument(
-        "--config", type=str, default="/lab/kiran/BeoEnv/hostfile.yaml", help="config file for resources"
+        "--machine", type=str, default="", help="machine to be training"
     )
     parser.add_argument(
         "--log", type=str, default="/lab/kiran/logs/rllib/atari", help="config file for resources"
     )
     parser.add_argument(
-        "--env_name", type=str, default="ALE/Pong-v5", help="ALE/Pong-v5"
+        "--env_name", type=str, default="BeamRiderNoFrameskip-v4", help="Environment name"
     )
     parser.add_argument(
         "--trainset", type=str, choices=["all", "set"], default="ALE/Pong-v5", help="ALE/Pong-v5"
     )
     parser.add_argument(
-        "--greyscale", type=bool, choices=[True, False], default=True, help="ALE/Pong-v5"
-    )
-    parser.add_argument(
-        "--setting", type=str, choices=["eachgame", "seqgame", "allgame"], default="ALE/Pong-v5", help="ALE/Pong-v5"
+        "--setting", type=str, choices=["eachgame", "seqgame", "allgame"], default="eachgame", help="Each game"
     )
     parser.add_argument(
         "--expname", type=str, choices=["adapter", "adapterpolicy", "policy", "corl23"], default="ALE/Pong-v5", help="ALE/Pong-v5"
     )
-    
+    parser.add_argument(
+        "--adapter", type=str, default="ALE/Pong-v5", help="ALE/Pong-v5"
+    )
+    parser.add_argument(
+        "--policy", type=str, default="ALE/Pong-v5", help="ALE/Pong-v5"
+    )    
     parser.add_argument(
         "--temporal", type=str, choices=["attention", "lstm", "4stack"], default="4stack", help="temporal model"
     )
-
     parser.add_argument(
-        "--stop_timesteps", type=int, default=10000000, help="Number of timesteps to train."
+        "--train", type=bool, default=True, help="temporal model"
+    )
+    parser.add_argument(
+        "--eval", type=bool, default=True, help="temporal model"
+    )
+    parser.add_argument(
+        "--stop_timesteps", type=int, default=15000000, help="Number of timesteps to train."
     )
     parser.add_argument(
         "--lr", type=float, default=1e-4, help="Number of timesteps to train."
@@ -83,23 +87,19 @@ def get_args():
         "--num_epoch", type=int, default=10, help="Number of timesteps to train."
     )
     parser.add_argument(
-        "--num_workers", type=int, default=20, help="Number of GPUs each worker has"
+        "--num_workers", type=int, default=8, help="Number of GPUs each worker has"
     )
     
     parser.add_argument(
-        "--num_envs", type=int, default=8, help="Number of envs each worker evaluates"
-    )
-
-    parser.add_argument(
-        "--roll_frags", type=int, default=100, help="Rollout fragments"
+        "--num_envs", type=int, default=5, help="Number of envs each worker evaluates"
     )
     
     parser.add_argument(
-        "--num_gpus", type=float, default=1, help="Number of GPUs each worker has"
+        "--num_gpus", type=float, default=.2, help="Number of GPUs each worker has"
     )
 
     parser.add_argument(
-        "--gpus_worker", type=float, default=.3, help="Number of GPUs each worker has"
+        "--gpus_worker", type=float, default=.1, help="Number of GPUs each worker has"
     ) 
 
     parser.add_argument(

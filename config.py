@@ -1,11 +1,11 @@
 from arguments import get_args
 from ray.tune.logger import pretty_print, UnifiedLogger, Logger, LegacyLoggerCallback
-import argparse
+
 import os
 
-parser = argparse.ArgumentParser()
 args = get_args()
 
+resource_file = '/lab/kiran/hostfile.yaml'
 
 #pathnames for all the saved .pth backbonemodels
 mapfile =  {"vae": "/lab/kiran/ckpt/vae", "e2e": "/lab/kiran/ckpt/e2e"}
@@ -22,6 +22,11 @@ test_atari_envs = ["CarnivalNoFrameskip-v4", "NameThisGameNoFrameskip-v4", "Phoe
 #test_beogym_envs = []
 
 
+#atari env -> multiple games
+#beogym env -> multiple cities
+#carla env -> multiple towns
+
+
 atari_config = {
     "env" : args.env_name,
     "clip_rewards" : True,
@@ -31,8 +36,8 @@ atari_config = {
         "logdir": os.path.expanduser(args.log)
         },
     "observation_filter":"NoFilter",
-    "num_workers":args.num_workers,
-    "rollout_fragment_length" : args.roll_frags,
+    "num_workers": args.num_workers,
+    "rollout_fragment_length" : 100,
     "num_envs_per_worker" : args.num_envs,
     "model":{
             "vf_share_layers" : True,

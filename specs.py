@@ -21,13 +21,13 @@ def generate_spec(envs):
             catalog_class=CustomPPOCatalog
         return spec
 
-
+    ModelCatalog.register_custom_model("model1", mod1)
 
     else:
         #just like gen_policies
+        mods = []
         for i in _:
-            ModelCatalog.register_custom_model("model1", mod1)
-            ModelCatalog.register_custom_model("model2", mod2)
+            ModelCatalog.register_custom_model("model", mods[i])
 
 
 

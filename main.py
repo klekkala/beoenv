@@ -6,7 +6,7 @@ import yaml
 import random
 
 
-
+import config
 import numpy as np
 import math, argparse, csv, copy, time, os
 from pathlib import Path
@@ -22,37 +22,33 @@ from ray.rllib.env.env_context import EnvContext
 from ray.rllib.models import ModelCatalog
 from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
 
-from models.AtariModels import VaeNetwork as TorchVae
-from models.AtariModels import PreTrainedResNetwork as TorchPreTrainedRes
-from models.AtariModels import ResNetwork as TorchRes
+import train
 from ray.rllib.utils.framework import try_import_torch
 from ray.rllib.utils.test_utils import check_learning_achieved
 from ray.tune.logger import pretty_print, UnifiedLogger, Logger, LegacyLoggerCallback
 from ray.tune.registry import get_trainable_cls
-
+from arguments import get_args
 
 
 if __name__ == "__main__":
     # Load the hdf5 files into a global variable
 
     torch, nn = try_import_torch()
-
-    if args.tune:
-        args.config = '/lab/kiran/BeoEnv/tune.yaml'
+    args = get_args()
 
     #extract data from the config file
-    if args.machine is not None:
-        with open(args.config, 'r') as cfile:
+    if args.machine != "":
+        with open(config.resource_file, 'r') as cfile:
             config_data = yaml.safe_load(cfile)
 
-    #update the args in the config.py file
-    args.num_workers, args.num_envs, args.num_gpus, args.gpus_worker, args.cpus_worker, args.roll_frags = config_data[args.machine]
+        #update the args in the config.py file
+        args.num_workers, args.num_envs, args.num_gpus, args.gpus_worker, args.cpus_worker, args.roll_frags = config_data[args.machine]
     
     ray.init(local_mode=args.local_mode)
 
     
     #log directory
-    str_logger = args.env_name + "_" + args.model + "_" + str(args.stop_timesteps) + "_lr" + str(args.lr) + "_lam" + str(args.lambda_) + "_kl" + str(args.kl_coeff) + "_cli" + str(args.clip_param) + "_ent" + str(args.entropy_coeff) + "_gam" + str(args.gamma) + "_buf" + str(args.buffer_size) + "_bat" + str(args.batch_size) + "_num" + str(args.num_epoch)
+    str_logger = args.env_name + "_" + args.trainset + "_" + args.setting + "_" + args.expname + "_" + args.adapter + "_" + args.policy + "_" + args.temporal
 
     #to the config you need to add str_logger!!!!!!! '/' + str_logger
 
@@ -81,7 +77,8 @@ if __name__ == "__main__":
         if args.setting == 'eachgame':
             #get the list of train or test environments from args.trainset
 
-            for each game:
+            #for eachgame:
+            for _ in range(1):
                 #env, prtr_model, str_logger
                 #in this case you create a new adapter
                 #policy,backbone stays fixed (pretrained/train)
@@ -91,7 +88,7 @@ if __name__ == "__main__":
                 #baseline 1.c, 1.d
                 #baseline 1.e, 1.f
                 #baseline 3.a.ft, 3.b.ft, 3.c.ft
-                train.single_train(args.env_name, args.trainset, args.prtr, args.adapter, args.policy, args.expname, args.eval, str_logger)
+                train.single_train(args.env_name, args.trainset, args.adapter, args.policy, args.expname, str_logger)
 
 
 
@@ -104,7 +101,7 @@ if __name__ == "__main__":
             #baseline 2.b (same )
             #baseline 2.c (our method)
             #expname == 'full', E2E through all envs
-            train.seq_train(args.env_name, args.trainset, args.prtr, args.adapter, args.policy, args.expname, str_logger)
+            train.seq_train(args.env_name, args.trainset, args.backbone, args.adapter, args.policy, args.expname, str_logger)
 
 
 
@@ -113,12 +110,12 @@ if __name__ == "__main__":
         else:
 
             #if you want to run the entire model e2e on multiple envs
-            if ** == experiment:
+            if args.expname == 'blah':
                 #baseline 1.b (allenvs)
                 #baseline 3.a.tr (setenvs)
-                train.single_train(envs, args.prtr, args.expname, str_logger)
+                train.single_train(envs, args.backbone, args.expname, str_logger)
             
-            elif:
+            elif args.expname == 'ddd':
                 #baseline 1.c, 1.e, 1.f, 3.c.tr: adapter+policy
                 #baseline 1.d, 3.d.tr, 3.c.tr: policy
                 train.multi_train()
