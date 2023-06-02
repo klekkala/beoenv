@@ -1,0 +1,1 @@
+python main.py --train --eval --set=train --setting=allgame --expname=backbone --backbone=vae

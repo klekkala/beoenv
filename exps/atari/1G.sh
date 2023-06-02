@@ -1,0 +1,1 @@
+python main.py --train --eval --set=all --setting=allgame --expname=ours --backbone=e2e

@@ -1,0 +1,1 @@
+python main.py --train --eval --set=all --setting=seqgame --expname=full --backbone=e2e --machine $1

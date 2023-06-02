@@ -4,16 +4,13 @@ from datetime import datetime
 import tempfile
 import yaml
 import random
-
-
-
 import numpy as np
 import math, argparse, csv, copy, time, os
 from pathlib import Path
-
+import envs
 from arguments import get_args
 import ray
-import config
+import configs
 from ray.rllib.utils.annotations import override
 from ray import air, tune
 from ray.tune.schedulers import PopulationBasedTraining
@@ -23,11 +20,12 @@ from ray.rllib.env.env_context import EnvContext
 from ray.rllib.models import ModelCatalog
 from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
 
-#import model
 from ray.rllib.utils.framework import try_import_torch
 from ray.rllib.utils.test_utils import check_learning_achieved
 from ray.tune.logger import pretty_print, UnifiedLogger, Logger, LegacyLoggerCallback
 from ray.tune.registry import get_trainable_cls
+from model import SingleAtariModel, SharedAtariModel
+import specs
 
 args = get_args()
 
@@ -39,14 +37,19 @@ args = get_args()
 #use_lstm needs to be incorporated here
 
 
-def pick_config():
+def pick_config_env(str_env):
     # modify atari_config to incorporate the environments
-    if env_name == 'Atari':
-        use_config = config.atari
-    elif env_name == 'Beo':
-        use_config = config.beo
-    elif env_name == 'Carla':
-        use_config = config.carla
+    
+    if args.env_name == 'atari':
+        use_config = configs.atari_config
+        use_env = envs.atari[str_env]
+    elif env_name == 'beogym':
+        use_config = configs.beo
+        use_env = envs.beogym[str_env]
+    elif env_name == 'carla':
+        use_config = configs.carla
+        use_env = envs.carla[str_env]
+    return use_config, use_env
 
 
 
@@ -54,111 +57,152 @@ def pick_config():
 
 #list of envs, what is the backbone, 
 #No Sequential transfer. Single task on all envs.
-def rllib_loop(config, backbone=None, policy=None):
+def rllib_loop(config):
 
     #load the config
     algo = PPO(config=config)
+    """
+    plc = algo.get_policy().get_weights()
 
     #get backbone and policy from setting.
-    backbone_ckpt = Policy.from_checkpoint(backbone).get_weights()
-    policy_ckpt = Policy.from_checkpoint(policy).get_weights()
-
     #you need to load the weights into the backbone or policy here!
-    plc = algo.get_policy().get_weights()
-    for params in plc.keys():
-        #load the policy
-        if 'mlp' in params:
-            plc[i] = res_wts[i]
-        #load the backbone
+    if backbone != 'e2e':
+        backbone_ckpt = Policy.from_checkpoint(backbone).get_weights()
+        for params in plc.keys():
+            #load the policy
+            if 'mlp' in params:
+                plc[i] = res_wts[i]
 
+    if backbone != None:
+        policy_ckpt = Policy.from_checkpoint(policy).get_weights()
+        for params in plc.keys():
+            #load the backbone
+            if 'cnn' in params:
+                plc[i] = res_wts[i]
+    """
     # run manual training loop and print results after each iteration
     for _ in range(args.stop_timesteps):
         result = algo.train()
         print(pretty_print(result))
         # stop training of the target train steps or reward are reached
+        #MAKE SURE YOU KEEP SAVING CHECKPOINTS
         if result["timesteps_total"] >= args.stop_timesteps:
             policy = algo.get_policy()
-            policy.export_checkpoint("./tmp/atari_checkpoint")
+            policy.export_checkpoint(args.ckpt + "/" + str_logger + "/checkpoint")
             break
     algo.stop()
 
 
 
 
-#THINGS TO CHANGE IN THE CONFIG FILE
-#which config to pick, env name, str_logger
 
 
 #Train singleenv.
 
 #Generic train fucntion that is used across all the below setups
-
-#list of envs, what is the backbone, 
+#what is the backbone and policy to be used if its not e2e
 #No Sequential transfer. Single task on all envs.
-#TECHNICALY, TRAINING THE ENTIRE MODEL ON ALL THE ENVIRONMENTS
-#IS ALSO SINGLEENV
-def single_train(str_logger, backbone, adapter, policy):
+#TECHNICALY, TRAINING THE ENTIRE MODEL ON ALL THE ENVIRONMENTS IS ALSO SINGLEENV
+def single_train(str_logger, backbone='e2e', policy=None):
 
     # modify atari_config to incorporate the environments
-    use_config = pick_config()
-
     #construct the environment from envs.py based on the env_name
-    #envclass = 
+    str_env = 'single' if args.setting == 'eachgame' else 'parellel'
+    use_config, use_env = pick_config_env(str_env)
 
+    
     # modify atari_config to incorporate the current environment
     #do all the config overwrites here
-    config.override(env_name=envclass)
+    use_config.update(
+                {
+                    "env" : use_env, 
+                    "env_config" : {}, 
+                    "logger_config" : {
+                        "type": UnifiedLogger,
+                        "logdir": os.path.expanduser(args.log + '/' + str_logger)
+                    }
+                }
+            )
 
     
     #start the training loop
-    rllib_loop(config.atari_config, adapter, policy)
+    rllib_loop(use_config)
 
 
 
 #sequential learning
 #this function reuses the train_singleenv function
-def seq_train(str_logger, backbone, adapter, policy):
+def seq_train(str_logger):
 
-    # modify atari_config to incorporate the environments
-    use_config = pick_config()
+    #get the base atari_config to incorporate the environments
+    #construct the base env class from envs.py based on the env_name
+    use_config, use_env = pick_config_env('single')
 
-    #construct the environment
-    allenvs = depend_on_the_env_pick()
+    #register the model
+    ModelCatalog.register_custom_model("model", SingleAtariModel)
     
     #In the forloop base config and spec stays the same
     for eachenv in allenvs:
         if env!=envs[0]:
             #in the for loop set the previous models weights
             backbone = backbone
-            config.override(env_name = eachenv)
-            rllib_loop(config, backbone)
+            current_config = use_config.update(
+                {"env_name" : eachenv, 
+                "env_config" : {}, 
+                "logdir" : envclass}
+                )
+            rllib_loop(config)
         else:
             #adapter, policy, backbone
-            config.override(env_name = eachenv)
-            rllib_loop(config, adapter, policy)
+            #env_config consists of which games we use
+            current_config = use_config.update(
+                {"env_name" : eachenv, 
+                "env_config" : {}, 
+                "logdir" : envclass}
+                )
+            rllib_loop(config)
 
 
 
 
 #Multi task on all envs
-def train_multienv(str_logger, backbone, adapter, policy)
+def train_multienv(str_logger):
 
-    #pick the config based on environments and tasks
-    use_config = pick_config()
-
-    #construct the environment
-    envclass = depend_on_the_env_pick() #atari or beo or smth
+    #get the base atari_config to incorporate the environments
+    #construct the base env class from envs.py based on the env_name
+    use_config, use_env = pick_config_env('multi')
 
     #construct the spec based on the environment/tasks
     #returns multipolicies and multimap
-    multistuff = specs.generate_specs()
+    #multistuff = specs.generate_specs()
+
+    #register the model
+    mods = [SharedAtariModel]*len(configs.all_envs)
+    for i in range(len(configs.all_envs)):
+        ModelCatalog.register_custom_model("model_" + str(i), mods[i])
+
+
+    policies = {"policy_{}".format(i): specs.gen_policy(i) for i in range(len(configs.all_envs))}
+    policy_ids = list(policies.keys())
+        
+
 
     # modify atari_config to incorporate the current environment
     #do all the config overwrites here
-    config.override(env_name=envclass)
-    
+    use_config.update(
+        {"env" : use_env,
+        "env_config" : {},
+        "multiagent": {
+            "policies" : policies,
+            "policy_mapping_fn" : (
+                lambda pol_id : policy_ids[agent_id%len(configs.all_envs)]
+                )
+            }
+        }
+    )
+
     #multistuff is a tuple
     #adapter and policy is a list
-    train_using_rllib(config, backbone, policy)
+    rllib_loop(use_config)
 
 

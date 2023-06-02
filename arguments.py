@@ -27,16 +27,19 @@ def get_args():
         "--log", type=str, default="/lab/kiran/logs/rllib/atari", help="config file for resources"
     )
     parser.add_argument(
-        "--env_name", type=str, default="BeamRiderNoFrameskip-v4", help="Environment name"
+        "--ckpt", type=str, default="/lab/kiran/ckpts/trained", help="directory for saving resources"
+    ) 
+    parser.add_argument(
+        "--env_name", type=str, default="atari", help="Environment name"
     )
     parser.add_argument(
-        "--trainset", type=str, choices=["all", "set"], default="ALE/Pong-v5", help="ALE/Pong-v5"
+        "--set", type=str, choices=["all", "train", "test"], default="all", help="ALE/Pong-v5"
     )
     parser.add_argument(
         "--setting", type=str, choices=["eachgame", "seqgame", "allgame"], default="eachgame", help="Each game"
     )
     parser.add_argument(
-        "--expname", type=str, choices=["adapter", "adapterpolicy", "policy", "corl23"], default="ALE/Pong-v5", help="ALE/Pong-v5"
+        "--expname", type=str, choices=["backbone", "backbonepolicy", "full", "ours"], default="ALE/Pong-v5", help="ALE/Pong-v5"
     )
     parser.add_argument(
         "--adapter", type=str, default="ALE/Pong-v5", help="ALE/Pong-v5"
@@ -48,10 +51,13 @@ def get_args():
         "--temporal", type=str, choices=["attention", "lstm", "4stack"], default="4stack", help="temporal model"
     )
     parser.add_argument(
-        "--train", type=bool, default=True, help="temporal model"
+        "--prefix", type=str, default="1.a", help="which baseline is it"
     )
     parser.add_argument(
-        "--eval", type=bool, default=True, help="temporal model"
+        "--train", action='store_true'
+    )
+    parser.add_argument(
+        "--eval", action='store_true'
     )
     parser.add_argument(
         "--stop_timesteps", type=int, default=15000000, help="Number of timesteps to train."
