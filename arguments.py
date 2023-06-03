@@ -39,13 +39,10 @@ def get_args():
         "--setting", type=str, choices=["eachgame", "seqgame", "allgame"], default="eachgame", help="Each game"
     )
     parser.add_argument(
-        "--expname", type=str, choices=["backbone", "backbonepolicy", "full", "ours"], default="ALE/Pong-v5", help="ALE/Pong-v5"
+        "--expname", type=str, choices=["backbone", "backbonepolicy", "full", "ours"], default="full", help="ALE/Pong-v5"
     )
     parser.add_argument(
-        "--adapter", type=str, default="ALE/Pong-v5", help="ALE/Pong-v5"
-    )
-    parser.add_argument(
-        "--policy", type=str, default="ALE/Pong-v5", help="ALE/Pong-v5"
+        "--policy", type=str, default="PolicyNotLoaded", help="ALE/Pong-v5"
     )    
     parser.add_argument(
         "--temporal", type=str, choices=["attention", "lstm", "4stack"], default="4stack", help="temporal model"

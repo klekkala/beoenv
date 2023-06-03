@@ -46,7 +46,7 @@ if __name__ == "__main__":
 
     
     #log directory
-    str_logger = args.prefix + "_" + args.set + "_" + args.setting + "_" + args.expname + "_" + args.adapter + "_" + args.policy + "_" + args.temporal
+    str_logger = args.prefix + "_" + args.set + "_" + args.setting + "_" + args.expname + "_" + args.backbone + "_" + args.policy + "_" + args.temporal
 
     #training, once finished, save the logs
     

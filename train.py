@@ -24,7 +24,9 @@ from ray.rllib.utils.framework import try_import_torch
 from ray.rllib.utils.test_utils import check_learning_achieved
 from ray.tune.logger import pretty_print, UnifiedLogger, Logger, LegacyLoggerCallback
 from ray.tune.registry import get_trainable_cls
-from model import SingleAtariModel, SharedAtariModel
+from model import SingleAtariModel, SharedAtariModel, SharedWeightsModel
+from tmpmodel import VisionNetwork
+from shared import TorchSharedWeightsModel
 import specs
 
 args = get_args()
@@ -58,7 +60,8 @@ def pick_config_env(str_env):
 #list of envs, what is the backbone, 
 #No Sequential transfer. Single task on all envs.
 def rllib_loop(config):
-
+    from IPython import embed
+    embed()
     #load the config
     algo = PPO(config=config)
     """
@@ -116,7 +119,7 @@ def single_train(str_logger, backbone='e2e', policy=None):
     use_config.update(
                 {
                     "env" : use_env, 
-                    "env_config" : {}, 
+                    "env_config" : {'envs': configs.all_envs if str_env == 'parellel' else None}, 
                     "logger_config" : {
                         "type": UnifiedLogger,
                         "logdir": os.path.expanduser(args.log + '/' + str_logger)
@@ -164,7 +167,6 @@ def seq_train(str_logger):
 
 
 
-
 #Multi task on all envs
 def train_multienv(str_logger):
 
@@ -177,29 +179,39 @@ def train_multienv(str_logger):
     #multistuff = specs.generate_specs()
 
     #register the model
-    mods = [SharedAtariModel]*len(configs.all_envs)
+    # mods = [VisionNetwork]*len(configs.all_envs)
+    mods = [TorchSharedWeightsModel]*len(configs.all_envs)
+    #mods = [SharedAtariModel]*len(configs.all_envs)
     for i in range(len(configs.all_envs)):
         ModelCatalog.register_custom_model("model_" + str(i), mods[i])
-
+    
 
     policies = {"policy_{}".format(i): specs.gen_policy(i) for i in range(len(configs.all_envs))}
-    policy_ids = list(policies.keys())
-        
-
+    #policy_ids = list(policies.keys())
+    policy_ids = ["policy_{}".format(i) for i in range(len(configs.all_envs))]
+    envs=len(mods)
+    def policy_mapping_fn(agent_id, episode, worker, **kwargs):
+        pol_id = policy_ids[agent_id%envs]
+        return pol_id
 
     # modify atari_config to incorporate the current environment
     #do all the config overwrites here
     use_config.update(
-        {"env" : use_env,
-        "env_config" : {},
-        "multiagent": {
-            "policies" : policies,
-            "policy_mapping_fn" : (
-                lambda pol_id : policy_ids[agent_id%len(configs.all_envs)]
-                )
+            {
+                    "env" : use_env, 
+                    "env_config" : {'envs': configs.all_envs}, 
+                    "logger_config" : {
+                        "type": UnifiedLogger,
+                        "logdir": os.path.expanduser(args.log + '/' + str_logger)
+                    }
+                    ,
+                    "multiagent": {
+                        "policies" : policies,
+                        "policy_mapping_fn" : policy_mapping_fn,
+
+                    }
             }
-        }
-    )
+        )
 
     #multistuff is a tuple
     #adapter and policy is a list

@@ -19,7 +19,7 @@ import numpy as np
 
 
 def gen_policy(i):
-    obs_space = gym.spaces.Box(0, 255, (84, 84, 3), np.uint8)
+    obs_space = gym.spaces.Box(0, 255, (84, 84, 4), np.uint8)
     act_space = gym.spaces.Discrete(18)
     config = {
         "model": {

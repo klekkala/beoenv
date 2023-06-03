@@ -8,20 +8,22 @@ from ray.rllib.env.multi_agent_env import MultiAgentEnv, make_multi_agent
 from ray import air, tune
 import numpy as np
 import cv2
-
+from ray.rllib.env.wrappers.atari_wrappers import wrap_deepmind
 ##SingleTask, MultiTask, MultiEnv classes and their related classes/functions
 
 class SingleAtariEnv(gym.Env):
     def __init__(self, env):
-        self.env = gym.make("ALE/BeamRider-v5", full_action_space=True)
+        self.env = wrap_deepmind(gym.make("ALE/BeamRider-v5", full_action_space=True))
         self.action_space = self.env.action_space
-        self.observation_space = gym.spaces.Box(0, 255, (84, 84, 3), np.uint8) #self.env.observation_space
+        self.observation_space = self.env.observation_space
 
     def reset(self, seed=None, options=None):
+        return self.env.reset()
         obs = self.env.reset()
         return cv2.resize(obs, (84, 84))
 
     def step(self, action):
+        return self.env.step(action)
         obs, reward, done, info = self.env.step(action)
         obs = cv2.resize(obs, (84, 84))
         #cv2.imwrite('obs.png', obs)
@@ -32,19 +34,18 @@ class SingleAtariEnv(gym.Env):
 
 class ParellelAtariEnv(gym.Env): 
     def __init__(self, envs):
-        print(envs)
-        for i in range(len(envs)):
-            print(env_config.worker_index)    
-            if env_config.worker_index%len(envs)==i:
-                self.env = gym.make(envs[i], full_action_space=True)
-                self.name= envs[i]
+        for i in range(len(envs['envs'])):
+            if envs.worker_index%len(envs['envs'])==i:
+                self.env = wrap_deepmind(gym.make(envs['envs'][i], full_action_space=True))
+                self.name= envs['envs'][i]
         #self.env = wrap_deepmind(self.env)
         self.action_space = self.env.action_space
-        self.observation_space = gym.spaces.Box(0, 255, (84, 84, 3), np.uint8) #self.env.observation_space
+        self.observation_space = gym.spaces.Box(0, 255, (84, 84, 4), np.uint8) #self.env.observation_space
         #if self.observation_space.shape[0]==214:
             #self.observation_space = gym.spaces.Box(0, 255, (210, 160, 3), np.uint8)
 
     def reset(self):
+        return self.env.reset()
         temp = self.env.reset()
         if isinstance(temp, np.ndarray):
             return cv2.resize(temp, (84, 84))
@@ -56,6 +57,7 @@ class ParellelAtariEnv(gym.Env):
         return tuple(temp)
     
     def step(self, action):
+        return self.env.step(action)
         temp = self.env.step(action)
         if isinstance(temp, np.ndarray):
             return cv2.resize(temp, (84, 84))
@@ -66,41 +68,73 @@ class ParellelAtariEnv(gym.Env):
 
 
 
+# class MultiAtariEnv(MultiAgentEnv):
+
+#     def __init__(self, envs):
+#         self.agents=[]
+#         self.envs = envs['envs']
+#         for i in range(len(self.envs)):
+#             self.agents.append(gym.make(self.envs[i], full_action_space=True))
+#         self.done = set()
+#         self.action_space = gym.spaces.Discrete(18)
+#         self.observation_space = gym.spaces.Box(0, 255, (84, 84, 3), np.uint8)
+#         self.resetted = False
+
+#     def reset(self, *, seed=None, options=None):
+#         res={}
+#         self.resetted = True
+#         self.done = set()
+#         for i in range(len(self.envs)):
+#             temp = self.agents[i].reset()
+#             temp = cv2.resize(temp, (84, 84))
+#             res[i]=temp
+#         return res
+
+#     def step(self, action_dict):
+#         obs, rew, done, info = {}, {}, {}, {}
+#         for i, action in action_dict.items():
+#             temp = self.agents[i].step(action)
+#             temp=list(temp)
+#             temp[0] = cv2.resize(temp[0], (84, 84))
+#             obs[i], rew[i], done[i], info[i] = temp
+#             if done[i]:
+#                 self.done.add(i)
+
+#         done["__all__"] = len(self.done) == len(self.agents)
+#         return obs, rew, done, info
+
 class MultiAtariEnv(MultiAgentEnv):
 
-    def __init__(self, envs):
-        self.agents=[]
-        self.envs = envs
-        for i in range(len(self.envs)):
-            self.agents.append(gym.make(self.envs[i], full_action_space=True))
-        self.done = set()
-        self.action_space = gym.spaces.Discrete(18)
-        self.observation_space = gym.spaces.Box(0, 255, (84, 84, 3), np.uint8)
-        self.resetted = False
+        def __init__(self,envs):
+            self.agents=[]
+            self.envs = envs['envs']
+            for i in range(len(envs['envs'])):
+                env=wrap_deepmind(gym.make(envs['envs'][i], full_action_space=True))
+                self.agents.append(env)
+            self.dones = set()
+            self.action_space = gym.spaces.Discrete(18)
+            self.observation_space = gym.spaces.Box(0, 255, (84, 84, 4), np.uint8)
+            self.resetted = False
 
-    def reset(self, *, seed=None, options=None):
-        res={}
-        self.resetted = True
-        self.terminateds = set()
-        self.truncateds = set()
-        for i in range(len(envs)):
-            temp = self.agents[i].reset()
-            temp = cv2.resize(temp, (84, 84))
-            res[i]=temp
-        return res
+        def reset(self):
+            res={}
+            self.resetted = True
+            self.dones = set()
+            for i in range(len(self.envs)):
+                temp = self.agents[i].reset()
+                res[i]=temp 
+            return res
 
-    def step(self, action_dict):
-        obs, rew, done, info = {}, {}, {}, {}
-        for i, action in action_dict.items():
-            temp = self.agents[i].step(action)
-            temp=list(temp)
-            temp[0] = cv2.resize(temp[0], (84, 84))
-            obs[i], rew[i], done[i], info[i] = temp
-            if done[i]:
-                self.done.add(i)
+        def step(self, action_dict):
+            obs, rew, done, info = {}, {}, {}, {}
+            for i, action in action_dict.items():
+                temp = self.agents[i].step(action)
+                obs[i], rew[i], done[i], info[i] = temp
+                if done[i]:
+                    self.dones.add(i)
+            done["__all__"] = len(self.dones) == len(self.agents)
+            return obs, rew, done, info
 
-        done["__all__"] = len(self.done) == len(self.agents)
-        return obs, rew, terminated, truncated, info
 
 tune.register_env('SingleAtariEnv', lambda config: SingleAtariEnv(config))
 tune.register_env('ParellelAtariEnv', lambda config: ParellelAtariEnv(config))
