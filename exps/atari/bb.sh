@@ -1,0 +1,1 @@
+python main.py --train --eval --set=all --env_name=beogym --expname=full --prefix=1.b

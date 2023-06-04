@@ -24,9 +24,7 @@ from ray.rllib.utils.framework import try_import_torch
 from ray.rllib.utils.test_utils import check_learning_achieved
 from ray.tune.logger import pretty_print, UnifiedLogger, Logger, LegacyLoggerCallback
 from ray.tune.registry import get_trainable_cls
-from model import SingleAtariModel, SharedAtariModel, SharedWeightsModel
-from tmpmodel import VisionNetwork
-from shared import TorchSharedWeightsModel
+from model import SingleAtariModel, SharedBackboneAtariModel, SharedBackbonePolicyAtariModel
 import specs
 
 args = get_args()
@@ -45,8 +43,8 @@ def pick_config_env(str_env):
     if args.env_name == 'atari':
         use_config = configs.atari_config
         use_env = envs.atari[str_env]
-    elif env_name == 'beogym':
-        use_config = configs.beo
+    elif args.env_name == 'beogym':
+        use_config = configs.beogym_config
         use_env = envs.beogym[str_env]
     elif env_name == 'carla':
         use_config = configs.carla
@@ -60,8 +58,8 @@ def pick_config_env(str_env):
 #list of envs, what is the backbone, 
 #No Sequential transfer. Single task on all envs.
 def rllib_loop(config):
-    from IPython import embed
-    embed()
+
+
     #load the config
     algo = PPO(config=config)
     """
@@ -179,9 +177,12 @@ def train_multienv(str_logger):
     #multistuff = specs.generate_specs()
 
     #register the model
-    # mods = [VisionNetwork]*len(configs.all_envs)
-    mods = [TorchSharedWeightsModel]*len(configs.all_envs)
-    #mods = [SharedAtariModel]*len(configs.all_envs)
+    if "backbone" in args.expname:
+        mods = [SharedBackboneAtariModel]*len(configs.all_envs)
+    
+    if "policy" in args.expname:
+        mods = [SharedBackbonePolicyAtariModel]*len(configs.all_envs)
+        
     for i in range(len(configs.all_envs)):
         ModelCatalog.register_custom_model("model_" + str(i), mods[i])
     

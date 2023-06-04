@@ -62,11 +62,9 @@ atari_config = {
     "num_cpus_per_worker":args.cpus_worker
     }
 
-"""
-create beogym_config from atari_config
+
 beogym_config = {
     "env" : args.env_name,
-    "clip_rewards" : True,
     "framework" : "torch",
     "logger_config": {
         "type": UnifiedLogger,
@@ -74,12 +72,13 @@ beogym_config = {
         },
     "observation_filter":"NoFilter",
     "num_workers":args.num_workers,
-    "rollout_fragment_length" : args.roll_frags,
+    "rollout_fragment_length" : 'auto',
     "num_envs_per_worker" : args.num_envs,
-    "model":{
-            "vf_share_layers" : True,
-
-    },
+    "model" : {
+                "use_lstm": True,
+                "lstm_cell_size": 64,
+                "conv_filters": [[16, [3, 5], [1,2]], [32, [5, 5], 2], [64, [5, 5], 3], [128, [5, 5], 4], [256, [9, 9], 1]],
+            },
     #"lambda_" : args.lambda_,
     "kl_coeff" : args.kl_coeff,
     "clip_param" : args.clip_param,
@@ -96,7 +95,7 @@ beogym_config = {
     }
 
 
-
+"""
 
 hyperparam_mutations = {
     "lambda": lambda: random.uniform(0.9, 1.0),

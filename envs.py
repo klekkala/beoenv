@@ -236,6 +236,7 @@ class MultiBeoEnv(MultiAgentEnv):
 #class MultiBeoEnv(MultiAgentEnv)
 
 
+beogym = {'single': SingleBeoEnv, 'parellel': ParellelBeoEnv, 'multi': MultiBeoEnv}
 
 
 
