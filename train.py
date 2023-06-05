@@ -19,12 +19,12 @@ from ray.tune.registry import register_env
 from ray.rllib.env.env_context import EnvContext
 from ray.rllib.models import ModelCatalog
 from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
-
+from ray.rllib.policy.policy import Policy
 from ray.rllib.utils.framework import try_import_torch
 from ray.rllib.utils.test_utils import check_learning_achieved
 from ray.tune.logger import pretty_print, UnifiedLogger, Logger, LegacyLoggerCallback
 from ray.tune.registry import get_trainable_cls
-from model import SingleAtariModel, SharedBackboneAtariModel, SharedBackbonePolicyAtariModel
+from models.atarimodels import SingleAtariModel, SharedBackboneAtariModel, SharedBackbonePolicyAtariModel
 import specs
 
 args = get_args()
@@ -59,28 +59,35 @@ def pick_config_env(str_env):
 #No Sequential transfer. Single task on all envs.
 def rllib_loop(config):
 
-
     #load the config
     algo = PPO(config=config)
-    """
-    plc = algo.get_policy().get_weights()
 
+    plc = algo.get_policy()
+
+    """
     #get backbone and policy from setting.
     #you need to load the weights into the backbone or policy here!
-    if backbone != 'e2e':
-        backbone_ckpt = Policy.from_checkpoint(backbone).get_weights()
+    if args.policy != None:
+        backbone_ckpt = Policy.from_checkpoint('/lab/kiran/ckpts/trained/' + args.backbone).get_weights()
         for params in plc.keys():
             #load the policy
             if 'mlp' in params:
                 plc[i] = res_wts[i]
 
-    if backbone != None:
+    #load the backbone
+    if args.backbone != 'e2e':
         policy_ckpt = Policy.from_checkpoint(policy).get_weights()
         for params in plc.keys():
             #load the backbone
             if 'cnn' in params:
                 plc[i] = res_wts[i]
     """
+
+    if args.setting == 'seqgame' and config['env'] != configs.all_envs[0]:
+        policy_ckpt = Policy.from_checkpoint(args.ckpt + "/" + args.prefix + "/checkpoint")
+        plc.set_weights(policy_ckpt.get_weights())
+
+
     # run manual training loop and print results after each iteration
     for _ in range(args.stop_timesteps):
         result = algo.train()
@@ -89,7 +96,7 @@ def rllib_loop(config):
         #MAKE SURE YOU KEEP SAVING CHECKPOINTS
         if result["timesteps_total"] >= args.stop_timesteps:
             policy = algo.get_policy()
-            policy.export_checkpoint(args.ckpt + "/" + str_logger + "/checkpoint")
+            policy.export_checkpoint(args.ckpt + "/" + args.prefix + "/checkpoint")
             break
     algo.stop()
 
@@ -143,25 +150,21 @@ def seq_train(str_logger):
     ModelCatalog.register_custom_model("model", SingleAtariModel)
     
     #In the forloop base config and spec stays the same
-    for eachenv in allenvs:
-        if env!=envs[0]:
-            #in the for loop set the previous models weights
-            backbone = backbone
-            current_config = use_config.update(
-                {"env_name" : eachenv, 
-                "env_config" : {}, 
-                "logdir" : envclass}
-                )
-            rllib_loop(config)
-        else:
-            #adapter, policy, backbone
-            #env_config consists of which games we use
-            current_config = use_config.update(
-                {"env_name" : eachenv, 
-                "env_config" : {}, 
-                "logdir" : envclass}
-                )
-            rllib_loop(config)
+    for eachenv in configs.all_envs: 
+        #in the for loop set the previous models weights
+        #adapter, policy, backbone
+        #env_config consists of which games we use
+        use_config.update(
+            {"env" : eachenv, 
+             "env_config" : {"full_action_space":True,},
+            "logger_config" : {
+                "type": UnifiedLogger,
+                "logdir": os.path.expanduser(args.log + '/' + str_logger)
+                }
+            }
+        )
+
+        rllib_loop(use_config)
 
 
 

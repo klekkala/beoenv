@@ -98,15 +98,15 @@ def get_args():
     )
     
     parser.add_argument(
-        "--num_gpus", type=float, default=.2, help="Number of GPUs each worker has"
+        "--num_gpus", type=float, default=.4, help="Number of GPUs each worker has"
     )
 
     parser.add_argument(
-        "--gpus_worker", type=float, default=.1, help="Number of GPUs each worker has"
+        "--gpus_worker", type=float, default=.2, help="Number of GPUs each worker has"
     ) 
 
     parser.add_argument(
-        "--cpus_worker", type=float, default=.5, help="Number of CPUs each worker has"
+        "--cpus_worker", type=float, default=1, help="Number of CPUs each worker has"
     )
 
     #use_lstm or framestacking

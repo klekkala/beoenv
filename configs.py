@@ -8,22 +8,24 @@ args = get_args()
 resource_file = '/lab/kiran/hostfile.yaml'
 
 #pathnames for all the saved .pth backbonemodels
+#IMPLEMENT VAE FOR BEOGYM
 mapfile =  {"vae": "/lab/kiran/ckpt/vae", "e2e": "/lab/kiran/ckpt/e2e"}
 
 #add the model to a mapfile dictionary
 
-#change this when doing beogym
-if args.set == "all":
-    all_envs = ["AirRaidNoFrameskip-v4","AssaultNoFrameskip-v4","BeamRiderNoFrameskip-v4", "CarnivalNoFrameskip-v4","DemonAttackNoFrameskip-v4","NameThisGameNoFrameskip-v4","PhoenixNoFrameskip-v4","RiverraidNoFrameskip-v4","SpaceInvadersNoFrameskip-v4"]
-elif args.set == "train": 
-    all_envs = ["AirRaidNoFrameskip-v4","AssaultNoFrameskip-v4","BeamRiderNoFrameskip-v4", "DemonAttackNoFrameskip-v4","RiverraidNoFrameskip-v4","SpaceInvadersNoFrameskip-v4"]
-else:
-    all_envs = ["CarnivalNoFrameskip-v4", "NameThisGameNoFrameskip-v4", "PhoenixNoFrameskip-v4"]
+if args.env_name == "atari":
+    if args.set == "all":
+        all_envs = ["AirRaidNoFrameskip-v4","AssaultNoFrameskip-v4","BeamRiderNoFrameskip-v4", "CarnivalNoFrameskip-v4","DemonAttackNoFrameskip-v4","NameThisGameNoFrameskip-v4","PhoenixNoFrameskip-v4","RiverraidNoFrameskip-v4","SpaceInvadersNoFrameskip-v4"]
+    elif args.set == "train": 
+        all_envs = ["AirRaidNoFrameskip-v4","AssaultNoFrameskip-v4","BeamRiderNoFrameskip-v4", "DemonAttackNoFrameskip-v4","RiverraidNoFrameskip-v4","SpaceInvadersNoFrameskip-v4"]
+    else:
+        all_envs = ["CarnivalNoFrameskip-v4", "NameThisGameNoFrameskip-v4", "PhoenixNoFrameskip-v4"]
 
-
-#all_beogym_envs = []
-#train_beogym_envs = []
-#test_beogym_envs = []
+elif args.env_name == "beogym":
+    all_beogym_envs = ['Manhattan']
+    all_envs = ['Manhattan']
+    #train_beogym_envs = []
+    #test_beogym_envs = []
 
 
 #atari env -> multiple games
@@ -72,7 +74,7 @@ beogym_config = {
         },
     "observation_filter":"NoFilter",
     "num_workers":args.num_workers,
-    "rollout_fragment_length" : 'auto',
+    "rollout_fragment_length" : 10,
     "num_envs_per_worker" : args.num_envs,
     "model" : {
                 "use_lstm": True,

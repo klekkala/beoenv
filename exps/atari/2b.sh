@@ -1,0 +1,1 @@
+python main.py --train --eval --set=all --setting=seqgame --expname=full --backbone=vae --prefix 2.b

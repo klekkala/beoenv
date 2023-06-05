@@ -27,14 +27,24 @@ torch, nn = try_import_torch()
 
 # The global, shared layer to be used by both models.
 # this model outputs a 512 latent dimension
-TORCH_GLOBAL_SHARED_BACKBONE= VAE(channel_in=4, ch=32, z=512)
-
+ATARI_GLOBAL_SHARED_BACKBONE= VAE(channel_in=4, ch=32, z=512)
 #if using lstm this could be used:
 #TORCH_GLOBAL_SHARED_BACKBONE= VAE(channel_in=1, ch=32, z=512)
 
-TORCH_GLOBAL_SHARED_POLICY = SlimFC(
+ATARI_GLOBAL_SHARED_POLICY = SlimFC(
     64,
     18,
+    activation_fn=nn.ReLU,
+    initializer=torch.nn.init.xavier_uniform_,
+)
+
+BEOGYM_GLOBAL_SHARED_BACKBONE= VAE(channel_in=4, ch=32, z=512)
+#if using lstm this could be used:
+#TORCH_GLOBAL_SHARED_BACKBONE= VAE(channel_in=1, ch=32, z=512)
+
+BEOGYM_GLOBAL_SHARED_POLICY = SlimFC(
+    64,
+    5,
     activation_fn=nn.ReLU,
     initializer=torch.nn.init.xavier_uniform_,
 )
@@ -112,3 +122,8 @@ class SharedBackbonePolicyAtariModel(SingleAtariModel):
         super().__init__(observation_space, action_space, num_outputs, model_config, name)
         self.backbone = TORCH_GLOBAL_SHARED_BACKBONE
         self.pi = TORCH_GLOBAL_SHARED_POLICY
+
+
+
+
+

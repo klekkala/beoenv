@@ -9,6 +9,7 @@ from ray import air, tune
 import numpy as np
 import cv2
 from ray.rllib.env.wrappers.atari_wrappers import wrap_deepmind
+#from beogym.beogym import BeoGym
 ##SingleTask, MultiTask, MultiEnv classes and their related classes/functions
 
 class SingleAtariEnv(gym.Env):

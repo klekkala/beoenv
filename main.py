@@ -55,7 +55,9 @@ if __name__ == "__main__":
 
 
     #Before you start training. run evaluate to check how much reward can a random agent do
-    #Towards the end evaluation on the trained games to see the final reward
+    if args.eval:
+        print("Implement start eval")
+
 
     if args.train:
 
@@ -64,10 +66,7 @@ if __name__ == "__main__":
         if args.setting == 'eachgame':
             #get the list of train or test environments from args.trainset
 
-            #for eachgame:
-            for _ in range(len(configs.all_envs)):
-                #baseline 1.a, 1.c, 1.d, 1.e, 1.f, 3.a.ft, 3.b.ft, 3.c.ft
-                train.single_train(str_logger)
+            train.single_train(str_logger)
 
 
 
@@ -88,3 +87,6 @@ if __name__ == "__main__":
             elif args.prefix == "1.c" or args.prefix == "1.e" or args.prefix == "1.f" or args.prefix == "3.c.tr" or args.prefix == "1.d" or args.prefix == "3.d.tr" or args.prefix == "3.e.tr":
                 train.train_multienv(str_logger)
 
+    #Towards the end evaluation on the trained games to see the final reward
+    if args.eval:
+        print("Implement end eval")
