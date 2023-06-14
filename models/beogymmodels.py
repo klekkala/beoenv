@@ -20,7 +20,7 @@ from ray.rllib.models.utils import get_activation_fn
 from ray.rllib.policy.sample_batch import SampleBatch
 from ray.rllib.utils.annotations import override
 from ray.rllib.utils.framework import try_import_torch
-from vaemodel import SmallVAE as VAE
+from vaemodel import Encoder
 
 torch, nn = try_import_torch()
 
@@ -28,7 +28,7 @@ torch, nn = try_import_torch()
 # The global, shared layer to be used by both models.
 # this model outputs a 512 latent dimension
 
-BEOGYM_GLOBAL_SHARED_BACKBONE= Encoder(channel_in=4, ch=32, z=512)
+BEOGYM_GLOBAL_SHARED_BACKBONE= Encoder(channels=5, ch=32, z=512)
 #if using lstm this could be used:
 #TORCH_GLOBAL_SHARED_BACKBONE= VAE(channel_in=1, ch=32, z=512)
 
@@ -52,11 +52,11 @@ class SingleBeogymModel(TorchModelV2, nn.Module):
         nn.Module.__init__(self)
 
 
-        self.backbone = VAE(channel_in=5, ch=32, z=512)
+        self.backbone = Encoder(channels=5, ch=32, z=512)
 
         # this is the adapter
         self.adapter = SlimFC(
-            512,
+            512*3*6,
             64,
             activation_fn=nn.ReLU,
             initializer=torch.nn.init.xavier_uniform_,
@@ -64,7 +64,7 @@ class SingleBeogymModel(TorchModelV2, nn.Module):
 
         self.pi = SlimFC(
                     64,
-                    18,
+                    5,
                     activation_fn=nn.ReLU,
                     initializer=torch.nn.init.xavier_uniform_)
 
@@ -80,8 +80,10 @@ class SingleBeogymModel(TorchModelV2, nn.Module):
 
 
     def forward(self, input_dict, state, seq_lens):
-
-        out = self.backbone(input_dict["obs"])
+        obs=input_dict["obs"]["obs"].permute(0, 3, 1, 2)
+        out = self.backbone(obs)
+        out = torch.reshape(out,[out.size(0),-1])
+        # out = out.view((out.size(0),-1))
         self._output = self.adapter(out)
         model_out = self.pi(self._output)
         return model_out, []

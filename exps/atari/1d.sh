@@ -1,1 +1,1 @@
-python main.py --train --eval --set=all --setting=allgame --expname=backbone --backbone=vae
+python main.py --train --eval --set=all --setting=allgame --expname=backbone --backbone=vae --prefix 1.d

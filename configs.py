@@ -16,13 +16,13 @@ mapfile =  {"vae": "/lab/kiran/ckpt/vae", "e2e": "/lab/kiran/ckpt/e2e"}
 if args.env_name == "atari":
     if args.set == "all":
         all_envs = ["AirRaidNoFrameskip-v4","AssaultNoFrameskip-v4","BeamRiderNoFrameskip-v4", "CarnivalNoFrameskip-v4","DemonAttackNoFrameskip-v4","NameThisGameNoFrameskip-v4","PhoenixNoFrameskip-v4","RiverraidNoFrameskip-v4","SpaceInvadersNoFrameskip-v4"]
+        #all_envs = ["BeamRiderNoFrameskip-v4"]
     elif args.set == "train": 
         all_envs = ["AirRaidNoFrameskip-v4","AssaultNoFrameskip-v4","BeamRiderNoFrameskip-v4", "DemonAttackNoFrameskip-v4","RiverraidNoFrameskip-v4","SpaceInvadersNoFrameskip-v4"]
     else:
         all_envs = ["CarnivalNoFrameskip-v4", "NameThisGameNoFrameskip-v4", "PhoenixNoFrameskip-v4"]
 
 elif args.env_name == "beogym":
-    all_beogym_envs = ['Manhattan']
     all_envs = ['Manhattan']
     #train_beogym_envs = []
     #test_beogym_envs = []
@@ -49,7 +49,6 @@ atari_config = {
             "vf_share_layers" : True,
 
     },
-    #"lambda_" : args.lambda_,
     "kl_coeff" : args.kl_coeff,
     "clip_param" : args.clip_param,
     "entropy_coeff" : args.entropy_coeff,
@@ -73,15 +72,14 @@ beogym_config = {
         "logdir": os.path.expanduser(args.log)
         },
     "observation_filter":"NoFilter",
-    "num_workers":args.num_workers,
+    "num_workers":args.num_workers-4,
     "rollout_fragment_length" : 10,
     "num_envs_per_worker" : args.num_envs,
-    "model" : {
-                "use_lstm": True,
-                "lstm_cell_size": 64,
-                "conv_filters": [[16, [3, 5], [1,2]], [32, [5, 5], 2], [64, [5, 5], 3], [128, [5, 5], 4], [256, [9, 9], 1]],
-            },
-    #"lambda_" : args.lambda_,
+    # "model" : {
+    #             "use_lstm": True,
+    #             "lstm_cell_size": 64,
+    #             "conv_filters": [[16, [3, 5], [1,2]], [32, [5, 5], 2], [64, [5, 5], 3], [128, [5, 5], 4], [256, [9, 9], 1]],
+    #         },
     "kl_coeff" : args.kl_coeff,
     "clip_param" : args.clip_param,
     "entropy_coeff" : args.entropy_coeff,

@@ -1,1 +1,1 @@
-python main.py --train --eval --set=all --setting=allgame --expname=backbonepolicy --backbone=e2e
+python main.py --train --eval --set=all --setting=allgame --expname=backbonepolicy --backbone=e2e --prefix 1.e

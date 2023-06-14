@@ -91,16 +91,17 @@ class Encoder(nn.Module):
         x = self.conv4(x)
         x = self.conv5(x)
 
-        if self.training:
-            mu = self.conv_mu(x)
-            log_var = self.conv_log_var(x)
-            x = self.sample(mu, log_var)
-        else:
-            mu = self.conv_mu(x)
-            x = mu
-            log_var = None
+        mu = self.conv_mu(x)
+        #if self.training:
+        #    mu = self.conv_mu(x)
+        #    log_var = self.conv_log_var(x)
+        #    x = self.sample(mu, log_var)
+        #else:
+        #    mu = self.conv_mu(x)
+        #    x = mu
+        #    log_var = None
 
-        return x, mu, log_var
+        return mu
 
 
 class Decoder(nn.Module):
@@ -162,24 +163,35 @@ class UnFlatten(nn.Module):
     def forward(self, input, size=512):
         return input.view(input.size(0), size, 1, 1)
 
+ch = 16
+from ray.rllib.models.torch.misc import same_padding
+
+
 class SmallVAE(nn.Module):
-    def __init__(self, channel_in=3, ch=32, z=64, h_dim=512):
+    def __init__(self, channel_in=3, z=64, h_dim=512):
         super(SmallVAE, self).__init__()
+        from IPython import embed
+        pad1, out1 = same_padding([84, 84], 8, 4)
+        pad2, out2 = same_padding(out1, 8, 4)
+        pad3, out3 = same_padding(out2, 8, 4)
+        #embed()
         self.encoder = nn.Sequential(
-            nn.Conv2d(channel_in, ch, kernel_size=4, stride=2),
+
+            nn.Conv2d(channel_in, 16, kernel_size=8, stride=4, padding=pad1[:2]),
             nn.ReLU(),
-            nn.Conv2d(ch, ch*2, kernel_size=4, stride=2),
+            nn.Conv2d(16, 32, kernel_size=4, stride=2, padding=pad2[:2]),
             nn.ReLU(),
-            nn.Conv2d(ch*2, ch*4, kernel_size=4, stride=2),
+            nn.Conv2d(32, 256, kernel_size=11, stride=1, padding=pad3[:2]),
             nn.ReLU(),
-            nn.Conv2d(ch*4, ch*8, kernel_size=4, stride=2),
-            nn.ReLU(),
-            #Flatten()
+            #nn.Conv2d(ch*4, ch*8, kernel_size=4, stride=2),
+            #nn.ReLU(),
+            #nn.Flatten(),
+            #nn.Linear(18432, 512)
 
         )
 
-        self.conv_mu = nn.Conv2d(ch*8, z, 2, 2)
-        self.conv_log_var = nn.Conv2d(ch*8, z, 2, 2)
+        #self.conv_mu = nn.Conv2d(256, z, 2, 2)
+        #self.conv_log_var = nn.Conv2d(256, z, 2, 2)
         
         self.decoder = nn.Sequential(
             UnFlatten(),
@@ -199,11 +211,12 @@ class SmallVAE(nn.Module):
 
         
     def forward(self, x):
-        x = x.type(torch.float32).permute(0, 3, 1, 2)
+        #x = x.type(torch.float32).permute(0, 3, 1, 2)
         h = self.encoder(x)
-        mu, log_var = self.conv_mu(h), self.conv_log_var(h)
-        mu = torch.flatten(mu, start_dim=1)
+        
+        #mu, log_var = self.conv_mu(h), self.conv_log_var(h)
+        #mu = torch.flatten(mu, start_dim=1)
         #log_var = torch.flatten(log_var, start_dim=1)
         #encoding = self.sample(mu, log_var)
         #return self.decoder(encoding), mu, log_var
-        return mu
+        return h

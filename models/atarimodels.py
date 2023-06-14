@@ -27,9 +27,9 @@ torch, nn = try_import_torch()
 
 # The global, shared layer to be used by both models.
 # this model outputs a 512 latent dimension
-ATARI_GLOBAL_SHARED_BACKBONE= VAE(channel_in=4, ch=32, z=512)
+ATARI_GLOBAL_SHARED_BACKBONE= VAE(channel_in=4, z=512)
 #if using lstm this could be used:
-#TORCH_GLOBAL_SHARED_BACKBONE= VAE(channel_in=1, ch=32, z=512)
+#TORCH_GLOBAL_SHARED_BACKBONE= VAE(channel_in=1, z=512)
 
 ATARI_GLOBAL_SHARED_POLICY = SlimFC(
     64,
@@ -38,7 +38,7 @@ ATARI_GLOBAL_SHARED_POLICY = SlimFC(
     initializer=torch.nn.init.xavier_uniform_,
 )
 
-BEOGYM_GLOBAL_SHARED_BACKBONE= VAE(channel_in=4, ch=32, z=512)
+BEOGYM_GLOBAL_SHARED_BACKBONE= VAE(channel_in=4, z=512)
 #if using lstm this could be used:
 #TORCH_GLOBAL_SHARED_BACKBONE= VAE(channel_in=1, ch=32, z=512)
 
@@ -61,16 +61,19 @@ class SingleAtariModel(TorchModelV2, nn.Module):
         )
         nn.Module.__init__(self)
 
-
-        self.backbone = VAE(channel_in=4, ch=32, z=512)
-
+        self.backbone = VAE(channel_in=4, z=512)
+        print(self.backbone)
+        #self.backbone.eval()
+        #for param in self.backbone.parameters():
+        #    param.requires_grad = False
+        
         # this is the adapter
-        self.adapter = SlimFC(
-            512,
-            64,
-            activation_fn=nn.ReLU,
-            initializer=torch.nn.init.xavier_uniform_,
-        )
+        #self.adapter = SlimFC(
+        #    512,
+        #    64,
+        #    activation_fn=nn.ReLU,
+        #    initializer=torch.nn.init.xavier_uniform_,
+        #)
 
         self.pi = SlimFC(
                     64,
@@ -109,7 +112,7 @@ class SharedBackboneAtariModel(SingleAtariModel):
         self, observation_space, action_space, num_outputs, model_config, name
     ):
         super().__init__(observation_space, action_space, num_outputs, model_config, name)
-        self.backbone = TORCH_GLOBAL_SHARED_BACKBONE
+        self.backbone = ATARI_GLOBAL_SHARED_BACKBONE
 
 
 #this is class is reused for every game/city/town
@@ -120,8 +123,8 @@ class SharedBackbonePolicyAtariModel(SingleAtariModel):
         self, observation_space, action_space, num_outputs, model_config, name
     ):
         super().__init__(observation_space, action_space, num_outputs, model_config, name)
-        self.backbone = TORCH_GLOBAL_SHARED_BACKBONE
-        self.pi = TORCH_GLOBAL_SHARED_POLICY
+        self.backbone = ATARI_GLOBAL_SHARED_BACKBONE
+        self.pi = ATARI_GLOBAL_SHARED_POLICY
 
 
 

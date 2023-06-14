@@ -10,7 +10,7 @@ def get_args():
     #parser = argparse.ArgumentParser()
     parser.add_argument(
         "--backbone",
-        choices=["e2e", "vae", "alloff", "eachmixedoff", "eachmediumoff", "eachexpertoff", "allmixedoff", "allmediumoff", "allexpertoff", "random", "imagenet", "voltron", "r3m", "value"],
+        choices=["e2e", "vae", "alloff", "eachmixedoff", "eachmediumoff", "eachexpertoff", "allmixedoff", "allmediumoff", "allexpertoff", "random", "value"],
         default="e2e",
     )
     parser.add_argument(
@@ -33,10 +33,10 @@ def get_args():
         "--env_name", type=str, default="atari", help="Environment name"
     )
     parser.add_argument(
-        "--set", type=str, choices=["all", "train", "test"], default="all", help="ALE/Pong-v5"
+        "--set", type=str, default="all", help="ALE/Pong-v5"
     )
     parser.add_argument(
-        "--setting", type=str, choices=["eachgame", "seqgame", "allgame"], default="eachgame", help="Each game"
+        "--setting", type=str, choices=["singlegame", "seqgame", "allgame"], default="singlegame", help="Each game"
     )
     parser.add_argument(
         "--expname", type=str, choices=["backbone", "backbonepolicy", "full", "ours"], default="full", help="ALE/Pong-v5"
@@ -57,13 +57,10 @@ def get_args():
         "--eval", action='store_true'
     )
     parser.add_argument(
-        "--stop_timesteps", type=int, default=15000000, help="Number of timesteps to train."
+        "--stop_timesteps", type=int, default=25000000, help="Number of timesteps to train."
     )
     parser.add_argument(
         "--lr", type=float, default=1e-4, help="Number of timesteps to train."
-    )
-    parser.add_argument(
-        "--lambda_", type=float, default=.95, help="Number of timesteps to train."
     )
     parser.add_argument(
         "--kl_coeff", type=float, default=.5, help="Number of timesteps to train."
@@ -78,7 +75,7 @@ def get_args():
         "--gamma", type=float, default=.95, help="Number of timesteps to train."
     )
     parser.add_argument(
-        "--vf_clip", type=float, default=10, help="Number of timesteps to train."
+        "--vf_clip", type=float, default=10.0, help="Number of timesteps to train."
     )
     parser.add_argument(
         "--buffer_size", type=int, default=5000, help="Number of timesteps to train."
@@ -90,7 +87,7 @@ def get_args():
         "--num_epoch", type=int, default=10, help="Number of timesteps to train."
     )
     parser.add_argument(
-        "--num_workers", type=int, default=8, help="Number of GPUs each worker has"
+        "--num_workers", type=int, default=9, help="Number of GPUs each worker has"
     )
     
     parser.add_argument(

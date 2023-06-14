@@ -26,6 +26,7 @@ from ray.rllib.utils.test_utils import check_learning_achieved
 from ray.tune.logger import pretty_print, UnifiedLogger, Logger, LegacyLoggerCallback
 from ray.tune.registry import get_trainable_cls
 from arguments import get_args
+import datetime
 
 
 if __name__ == "__main__":
@@ -36,17 +37,19 @@ if __name__ == "__main__":
 
     #extract data from the config file
     if args.machine != "":
-        with open(config.resource_file, 'r') as cfile:
+        with open(configs.resource_file, 'r') as cfile:
             config_data = yaml.safe_load(cfile)
 
         #update the args in the config.py file
-        args.num_workers, args.num_envs, args.num_gpus, args.gpus_worker, args.cpus_worker, args.roll_frags = config_data[args.machine]
+        print("updating resource parameters")
+        args.num_workers, args.num_envs, args.num_gpus, args.gpus_worker, args.cpus_worker, _ = config_data[args.machine]
     
     ray.init(local_mode=args.local_mode)
 
     
     #log directory
-    str_logger = args.prefix + "_" + args.set + "_" + args.setting + "_" + args.expname + "_" + args.backbone + "_" + args.policy + "_" + args.temporal
+    suffix = datetime.datetime.now().strftime("%y_%m_%d_%H_%M_%S")
+    str_logger = args.prefix + "_" + args.set + "_" + args.setting + "_" + args.expname + "_" + args.backbone + "_" + args.policy + "_" + args.temporal + "/" + suffix
 
     #training, once finished, save the logs
     
@@ -63,7 +66,7 @@ if __name__ == "__main__":
 
         #if the program is run for all the games independently
         #and so you run the training procedure independently across all the games
-        if args.setting == 'eachgame':
+        if args.setting == 'singlegame':
             #get the list of train or test environments from args.trainset
 
             train.single_train(str_logger)
