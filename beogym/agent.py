@@ -112,13 +112,15 @@ class Agent():
     # Update the current status of the agent:
     # @profile(precision=5)
     def update_agent(self, new_pos, curr_pos, new_angle):
+        
+        self.agent_pos_prev = self.agent_pos_curr
+        self.agent_pos_curr = new_pos
+        self.curr_angle = new_angle
+
         if self.agent_pos_prev==self.agent_pos_curr:
             move = False
         else:
             move = True
-        self.agent_pos_prev = self.agent_pos_curr
-        self.agent_pos_curr = new_pos
-        self.curr_angle = new_angle
 
         if self.pano_mode:
             self.curr_view = self.dh.panorama_split(self.curr_angle, curr_pos, self.view_res,move)

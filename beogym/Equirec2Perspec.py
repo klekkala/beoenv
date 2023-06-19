@@ -29,7 +29,7 @@ class Equirectangular:
             try:
                 if count>100:
                     break
-                self.db = plyvel.DB('/lab/tmpig4b/u/manhattan/data' + str(count) + '/')
+                self.db = plyvel.DB('/home/tmp/kiran/manhattan/data' + str(count) + '/')
             except :
                 count += 1
         self._img=None
@@ -49,7 +49,7 @@ class Equirectangular:
                 try:
                     if count>100:
                         continue
-                    self.db = plyvel.DB('/lab/tmpig4b/u/manhattan/data' + str(count) + '/')
+                    self.db = plyvel.DB('/home/tmp/kiran/manhattan/data' + str(count) + '/')
                     self._img = cv2.imdecode(np.frombuffer(self.db.get(str2byte(pos)), np.uint8), -1)
                 except :
                     count += 1

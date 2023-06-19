@@ -53,7 +53,7 @@ def calcDist(start, end):
 
 class dataHelper():
 
-    def __init__(self, csv_file, hov_val,isFile=False):
+    def __init__(self, csv_file, hov_val, city, data_path, isFile=False):
 
         self.G = gt.Graph()
         self.Gdict={}
@@ -62,8 +62,8 @@ class dataHelper():
         self.route=[(1.3984153906729517, -24.730699803708518), (12.281358723435147, -14.786001935545627), (25.395387695338428, 1.13332033476172), (35.49040814970007, 23.44676699952089)]
         self.route_loc=0
         self.path_loc=0
-        self.equ = E2P.Equirectangular()
-
+        self.equ = E2P.Equirectangular(data_path)
+        self.city = city
         # Create canvas for plot rendering:
         self.xdata = []
         self.ydata = []
@@ -271,31 +271,47 @@ class dataHelper():
 
             nx.write_gpickle(self.G, localMap)
             pickle.dump(self.end_points, open(localMap.split('.')[0] + '.pickle', 'wb'))
+        
         depth=0
         vertices=set()
         vfilt = self.G.new_vertex_property('bool');
         new_dict={}
 
-    
-        for e in gt.bfs_iterator(self.G, self.G.vertex(self.Gdict[(-89.8135819320945, -86.99411624217562)])):
-            vertices.add(e.source())
-            vertices.add(e.target())
-            vfilt[e.source()] = True
-            vfilt[e.target()] = True
-            new_dict[self.Greversed[e.source()]]=e.source()
-            new_dict[self.Greversed[e.target()]]=e.target()
-            if len(vertices)==7224:
-                break
-        Gdict=new_dict
-        Greversed={value: key for key, value in Gdict.items()}
-        sub = gt.GraphView(self.G, vfilt)
-        self.G = sub
-        self.Gdict = Gdict
-        self.Greversed=Greversed
+
+        
+        Wall_Street = [(-89.8135819320945, -86.99411624217562),7224]
+        Union_Square = [(-21.67198697935339, -22.411925691329387),15525]
+        Hudson_River = [(85.92341169389903, -12.685304196935363),18085]
+
+
+        if self.city == 'Wall_Street':    
+            chosen_city = Wall_Street
+        elif self.city == 'Union_Square':
+            chosen_city = Union_Square
+        elif self.city == 'Hudson_River':
+            chosen_city = Hudson_River
+        else:
+            chosen_city = None
+        if chosen_city!=None:
+            for e in gt.bfs_iterator(self.G, self.G.vertex(self.Gdict[chosen_city[0]])):
+                vertices.add(e.source())
+                vertices.add(e.target())
+                vfilt[e.source()] = True
+                vfilt[e.target()] = True
+                new_dict[self.Greversed[e.source()]]=e.source()
+                new_dict[self.Greversed[e.target()]]=e.target()
+                if len(vertices)==chosen_city[1]:
+                    break
+            Gdict=new_dict
+            Greversed={value: key for key, value in Gdict.items()}
+            sub = gt.GraphView(self.G, vfilt)
+            self.G = sub
+            self.Gdict = Gdict
+            self.Greversed=Greversed
         print(self.G)
         plt.savefig("filename5.png")
 
-    def read_routes(self, csv_file="data/pano_gps.csv"):
+    def read_routes(self, csv_file="beogym/data/pano_gps.csv"):
         data = pd.read_csv(csv_file, keep_default_na=False, dtype='str')
         if app_config.PANO_IMAGE_LIMIT:
             data = data[:app_config.PANO_IMAGE_LIMIT]
@@ -321,7 +337,16 @@ class dataHelper():
                     print(temp)
             print(self.route)
             
+        if self.city=='Wall_Street':    
+            return (-61.63857417592947, -64.93267436677775)
+        elif self.city=='Union_Square':
+            return (-45.04695452668559, -50.39745826654991)
+        elif self.city=='Hudson_River':
+            return (93.1395291367042, -0.7047850456277587)
+        return (-61.63857417592947, -64.93267436677775)
         random_loc = random.choice(list(self.Gdict.keys()))
+        print('random')
+        print(random_loc)
         return random_loc
         #return (25.435566549339654, 44.19074421319752)
         #return self.route[0]

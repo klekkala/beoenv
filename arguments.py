@@ -1,7 +1,7 @@
 import argparse
 import torch
 
-#(args.backbone, args.setting, args.trainset, args.expname)
+#(args.backbone, args.setting, args.trainset, args.shared)
 #args.expname only makes sense if args.setting is not allgame
 
 #if args.backbone e2e.. then the gradients flow through the backbone during training
@@ -10,7 +10,7 @@ def get_args():
     #parser = argparse.ArgumentParser()
     parser.add_argument(
         "--backbone",
-        choices=["e2e", "vae", "alloff", "eachmixedoff", "eachmediumoff", "eachexpertoff", "allmixedoff", "allmediumoff", "allexpertoff", "random", "value"],
+        #choices=["e2e", "vae", "alloff", "eachmixedoff", "eachmediumoff", "eachexpertoff", "allmixedoff", "allmediumoff", "allexpertoff", "random", "value", "1channel_vae", "4stack_vae"],
         default="e2e",
     )
     parser.add_argument(
@@ -36,10 +36,13 @@ def get_args():
         "--set", type=str, default="all", help="ALE/Pong-v5"
     )
     parser.add_argument(
+        "--data_path", type=str, default="", help="for beogym"
+    )
+    parser.add_argument(
         "--setting", type=str, choices=["singlegame", "seqgame", "allgame"], default="singlegame", help="Each game"
     )
     parser.add_argument(
-        "--expname", type=str, choices=["backbone", "backbonepolicy", "full", "ours"], default="full", help="ALE/Pong-v5"
+        "--shared", type=str, choices=["backbone", "backbonepolicy", "full", "ours"], default="full", help="ALE/Pong-v5"
     )
     parser.add_argument(
         "--policy", type=str, default="PolicyNotLoaded", help="ALE/Pong-v5"
@@ -54,6 +57,9 @@ def get_args():
         "--train", action='store_true'
     )
     parser.add_argument(
+        "--freeze_backbone", action='store_true'
+    )
+    parser.add_argument(
         "--eval", action='store_true'
     )
     parser.add_argument(
@@ -63,7 +69,7 @@ def get_args():
         "--lr", type=float, default=1e-4, help="Number of timesteps to train."
     )
     parser.add_argument(
-        "--kl_coeff", type=float, default=.5, help="Number of timesteps to train."
+        "--kl_coeff", type=float, default=0.0, help="Number of timesteps to train."
     )
     parser.add_argument(
         "--clip_param", type=float, default=.1, help="Number of timesteps to train."

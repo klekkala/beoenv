@@ -9,7 +9,14 @@ from ray import air, tune
 import numpy as np
 import cv2
 import random
+from ray.rllib.policy.sample_batch import SampleBatch
 from ray.rllib.env.wrappers.atari_wrappers import FrameStack, WarpFrame, NoopResetEnv, MonitorEnv, MaxAndSkipEnv, FireResetEnv
+import ray
+from ray import air, tune
+from ray.rllib.algorithms.algorithm import Algorithm
+from ray.rllib.policy.policy_template import build_policy_class
+from ray.rllib.policy.sample_batch import SampleBatch
+
 #from beogym.beogym import BeoGym
 ##SingleTask, MultiTask, MultiEnv classes and their related classes/functions
 
@@ -41,29 +48,10 @@ def wrap_custom(env, dim=84, framestack=True):
 
 
 
+from ray.rllib.utils.annotations import override
 
-class ParellelCallbacks(DefaultCallbacks):
-    def on_episode_end(
-    self,
-    *,
-    worker: RolloutWorker,
-    base_env: BaseEnv,
-    policies: Dict[str, Policy],
-    episode: Episode,
-    env_index: int,
-    **kwargs
-    ):
-    # Check if there are multiple episodes in a batch, i.e.
-    # "batch_mode": "truncate_episodes".
-        if worker.policy_config["batch_mode"] == "truncate_episodes":
-        # Make sure this episode is really done.
-            assert episode.batch_builder.policy_collectors["default_policy"].batches[
-                -1
-            ]["dones"][-1], (
-                "ERROR: `on_episode_end()` should only be called "
-                "after episode is done!"
-            )
-        episode.custom_metrics[base_env.vector_env.envs[0].name] = episode.total_reward
+atari_rewards={"AirRaidNoFrameskip-v4": 8000, "AssaultNoFrameskip-v4": 883,"BeamRiderNoFrameskip-v4": 1400, "CarnivalNoFrameskip-v4": 4384,"DemonAttackNoFrameskip-v4": 415, "NameThisGameNoFrameskip-v4": 6000,"PhoenixNoFrameskip-v4":4900,"RiverraidNoFrameskip-v4": 8400,"SpaceInvadersNoFrameskip-v4":500}
+atari_envs = ["AirRaidNoFrameskip-v4", "AssaultNoFrameskip-v4", "BeamRiderNoFrameskip-v4", "CarnivalNoFrameskip-v4", "DemonAttackNoFrameskip-v4", "NameThisGameNoFrameskip-v4", "PhoenixNoFrameskip-v4", "RiverraidNoFrameskip-v4", "SpaceInvadersNoFrameskip-v4"]
 
 
 
@@ -93,8 +81,10 @@ class MultiCallbacks(DefaultCallbacks):
 
 class SingleAtariEnv(gym.Env):
     def __init__(self, env_config):
-        print("I'm usoing single env lksjdflkasklfdkaskdlfj", env_config['env'])
-        self.env = wrap_custom(gym.make(env_config['env'], full_action_space=True), framestack=True)
+        print("I'm using single env lksjdflkasklfdkaskdlfj", env_config['env'])
+        #if env_config['framestack']:
+        self.env = wrap_custom(gym.make(env_config['env'], full_action_space=True), framestack=env_config['framestack'])
+
         self.action_space = self.env.action_space
         self.observation_space = self.env.observation_space
         print(self.observation_space)
@@ -107,9 +97,8 @@ class SingleAtariEnv(gym.Env):
 
 class ParellelAtariEnv(gym.Env): 
     def __init__(self, env_config):
-        self.atari_rewards={"AirRaidNoFrameskip-v4":27275, "AssaultNoFrameskip-v4": 724,"BeamRiderNoFrameskip-v4": 1588, "CarnivalNoFrameskip-v4": 3500,"DemonAttackNoFrameskip-v4": 2080,"NameThisGameNoFrameskip-v4": 7250,"PhoenixNoFrameskip-v4":6010,"RiverraidNoFrameskip-v4": 8600,"SpaceInvadersNoFrameskip-v4":1145}
         for i in range(len(env_config['envs'])):
-            print(env_config.worker_index, env_config['envs'])
+            #print(env_config.worker_index, env_config['envs'])
             if env_config.worker_index%len(env_config['envs'])==i:
                 self.env = wrap_custom(gym.make(env_config['envs'][i], full_action_space=True))
                 self.name= env_config['envs'][i]
@@ -126,16 +115,18 @@ class ParellelAtariEnv(gym.Env):
 
 class MultiAtariEnv(MultiAgentEnv):
 
-        def __init__(self, envs):
+        def __init__(self, env_config):
             self.agents=[]
-            self.envs = envs['envs']
-            for i in range(len(envs['envs'])):
-                print(envs['envs'][i])
-                env=wrap_deepmind(gym.make(envs['envs'][i], full_action_space=True))
+            self.envs = env_config['envs']
+            for i in range(len(env_config['envs'])):
+                print(env_config['envs'][i])
+                env=wrap_custom(gym.make(env_config['envs'][i], full_action_space=True))
                 self.agents.append(env)
             self.dones = set()
-            self.action_space = gym.spaces.Discrete(18)
-            self.observation_space = gym.spaces.Box(0, 255, (84, 84, 4), np.uint8)
+            #This is a bad habbit. change it.
+            self.action_space = self.agents[-1].action_space
+            self.observation_space = self.agents[-1].observation_space
+            print(self.observation_space)
             self.resetted = False
 
         def reset(self):
@@ -165,7 +156,7 @@ atari = {'single': SingleAtariEnv, 'parellel': ParellelAtariEnv, 'multi': MultiA
 #class SingleBeoEnv((gym.Env))
 class SingleBeoEnv(gym.Env):
     def __init__(self,env_config):
-        self.env = BeoGym({})
+        self.env = BeoGym({'city':env_config['env'], 'data_path':env_config['data_path']})
         self.action_space = self.env.action_space
         self.observation_space = self.env.observation_space
 

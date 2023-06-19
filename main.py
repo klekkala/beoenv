@@ -7,7 +7,7 @@ import random
 import numpy as np
 import math, argparse, csv, copy, time, os
 from pathlib import Path
-
+#import graph_tool.all as gt
 import argparse
 import ray
 from ray.rllib.utils.annotations import override
@@ -42,14 +42,14 @@ if __name__ == "__main__":
 
         #update the args in the config.py file
         print("updating resource parameters")
-        args.num_workers, args.num_envs, args.num_gpus, args.gpus_worker, args.cpus_worker, _ = config_data[args.machine]
+        args.num_workers, args.num_envs, args.num_gpus, args.gpus_worker, args.cpus_worker, _, _ = config_data[args.machine]
     
     ray.init(local_mode=args.local_mode)
 
     
     #log directory
     suffix = datetime.datetime.now().strftime("%y_%m_%d_%H_%M_%S")
-    str_logger = args.prefix + "_" + args.set + "_" + args.setting + "_" + args.expname + "_" + args.backbone + "_" + args.policy + "_" + args.temporal + "/" + suffix
+    str_logger = args.prefix + "_" + args.set + "_" + args.setting + "_" + args.shared + "_" + args.backbone + "_" + args.policy + "_" + args.temporal + "/" + suffix
 
     #training, once finished, save the logs
     
@@ -68,8 +68,10 @@ if __name__ == "__main__":
         #and so you run the training procedure independently across all the games
         if args.setting == 'singlegame':
             #get the list of train or test environments from args.trainset
-
-            train.single_train(str_logger)
+            if args.env_name == 'beogym':
+                train.beogym_single_train(str_logger)
+            else:
+                train.single_train(str_logger)
 
 
 
@@ -85,7 +87,8 @@ if __name__ == "__main__":
 
             #if you want to run the entire model e2e on multiple envs
             if args.prefix == "1.b" or args.prefix == "3.a.tr" or args.prefix == "3.b.tr":
-                train.single_train(str_logger)
+                #train.single_train(str_logger)
+                train.train_multienv(str_logger)
             
             elif args.prefix == "1.c" or args.prefix == "1.e" or args.prefix == "1.f" or args.prefix == "3.c.tr" or args.prefix == "1.d" or args.prefix == "3.d.tr" or args.prefix == "3.e.tr":
                 train.train_multienv(str_logger)

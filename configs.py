@@ -9,7 +9,7 @@ resource_file = '/lab/kiran/hostfile.yaml'
 
 #pathnames for all the saved .pth backbonemodels
 #IMPLEMENT VAE FOR BEOGYM
-mapfile =  {"vae": "/lab/kiran/ckpt/vae", "e2e": "/lab/kiran/ckpt/e2e"}
+map_models =  {"1channel_vae": "/lab/kiran/ckpts/pretrained/atari/GREY_ATARI.pt", "4stack_vae": "/lab/kiran/ckpts/pretrained/atari/4STACK_ATARI.pt", "4stack_vae_2games": "/lab/kiran/ckpts/pretrained/atari/4STACK_ATARI_2games.pt", "1channel_vae_beamrider": "/lab/kiran/ckpts/pretrained/atari/GREY_ATARI_onlybeamrider.pt", "random": None, "e2e": None}
 
 #add the model to a mapfile dictionary
 
@@ -23,7 +23,7 @@ if args.env_name == "atari":
         all_envs = ["CarnivalNoFrameskip-v4", "NameThisGameNoFrameskip-v4", "PhoenixNoFrameskip-v4"]
 
 elif args.env_name == "beogym":
-    all_envs = ['Manhattan']
+    all_envs = ['Wall_Street', 'Union_Square', 'Hudson_River']
     #train_beogym_envs = []
     #test_beogym_envs = []
 
@@ -53,6 +53,7 @@ atari_config = {
     "clip_param" : args.clip_param,
     "entropy_coeff" : args.entropy_coeff,
     "gamma" : args.gamma,
+    "lr" : args.lr,
     "vf_clip_param" : args.vf_clip,
     "train_batch_size":args.buffer_size,
     "sgd_minibatch_size":args.batch_size,
@@ -72,14 +73,17 @@ beogym_config = {
         "logdir": os.path.expanduser(args.log)
         },
     "observation_filter":"NoFilter",
-    "num_workers":args.num_workers-4,
+    "num_workers":args.num_workers,
     "rollout_fragment_length" : 10,
     "num_envs_per_worker" : args.num_envs,
-    # "model" : {
-    #             "use_lstm": True,
-    #             "lstm_cell_size": 64,
-    #             "conv_filters": [[16, [3, 5], [1,2]], [32, [5, 5], 2], [64, [5, 5], 3], [128, [5, 5], 4], [256, [9, 9], 1]],
-    #         },
+    'model':{
+                "use_lstm": True,
+                "lstm_cell_size": 64,
+                "lstm_use_prev_action" : True,
+                "lstm_use_prev_reward" : True,
+                "vf_share_layers": True,
+                "conv_filters": [[16, 3, 2], [32, 3, 2], [64, 3, 2], [128, 3, 2], [256, 3, 2]],
+            },
     "kl_coeff" : args.kl_coeff,
     "clip_param" : args.clip_param,
     "entropy_coeff" : args.entropy_coeff,

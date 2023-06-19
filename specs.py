@@ -23,7 +23,7 @@ def gen_policy(i):
     act_space = gym.spaces.Discrete(18)
     config = {
         "model": {
-            #"custom_model": "model_" + str(i)
+            "custom_model": "model_" + str(i)
         }
     }
     #return PolicySpec(config=config)
