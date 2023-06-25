@@ -1,26 +1,28 @@
 from arguments import get_args
 from ray.tune.logger import pretty_print, UnifiedLogger, Logger, LegacyLoggerCallback
-
 import os
 
 args = get_args()
 
-resource_file = '/lab/kiran/hostfile.yaml'
+
+
+
+resource_file = '/lab/kiran/hostconf/'
 
 #pathnames for all the saved .pth backbonemodels
 #IMPLEMENT VAE FOR BEOGYM
-map_models =  {"1channel_vae": "/lab/kiran/ckpts/pretrained/atari/GREY_ATARI.pt", "4stack_vae": "/lab/kiran/ckpts/pretrained/atari/4STACK_ATARI.pt", "4stack_vae_2games": "/lab/kiran/ckpts/pretrained/atari/4STACK_ATARI_2games.pt", "1channel_vae_beamrider": "/lab/kiran/ckpts/pretrained/atari/GREY_ATARI_onlybeamrider.pt", "random": None, "e2e": None}
+map_models =  {"1channel_vae": "/lab/kiran/ckpts/pretrained/atari/GREY_ATARI.pt", "4stackvae": "/lab/kiran/ckpts/pretrained/atari/4STACK_ATARI_BEAMRIDER.pt", "4stackvaefull": "/lab/kiran/ckpts/pretrained/atari/4STACK_ATARI.pt", "1channel_vae_beamrider": "/lab/kiran/ckpts/pretrained/atari/GREY_ATARI_onlybeamrider.pt", "random": None, "e2e": None}
 
 #add the model to a mapfile dictionary
 
 if args.env_name == "atari":
     if args.set == "all":
         all_envs = ["AirRaidNoFrameskip-v4","AssaultNoFrameskip-v4","BeamRiderNoFrameskip-v4", "CarnivalNoFrameskip-v4","DemonAttackNoFrameskip-v4","NameThisGameNoFrameskip-v4","PhoenixNoFrameskip-v4","RiverraidNoFrameskip-v4","SpaceInvadersNoFrameskip-v4"]
-        #all_envs = ["BeamRiderNoFrameskip-v4"]
+        #all_envs = ["BeamRiderNoFrameskip-v4", "AssaultNoFrameskip-v4"]
     elif args.set == "train": 
-        all_envs = ["AirRaidNoFrameskip-v4","AssaultNoFrameskip-v4","BeamRiderNoFrameskip-v4", "DemonAttackNoFrameskip-v4","RiverraidNoFrameskip-v4","SpaceInvadersNoFrameskip-v4"]
+        all_envs = ["AirRaidNoFrameskip-v4", "CarnivalNoFrameskip-v4", "DemonAttackNoFrameskip-v4", "NameThisGameNoFrameskip-v4" ,"SpaceInvadersNoFrameskip-v4"]
     else:
-        all_envs = ["CarnivalNoFrameskip-v4", "NameThisGameNoFrameskip-v4", "PhoenixNoFrameskip-v4"]
+        all_envs = ["AssaultNoFrameskip-v4", "BeamRiderNoFrameskip-v4", "RiverraidNoFrameskip-v4", "PhoenixNoFrameskip-v4"]
 
 elif args.env_name == "beogym":
     all_envs = ['Wall_Street', 'Union_Square', 'Hudson_River']
@@ -47,7 +49,6 @@ atari_config = {
     "num_envs_per_worker" : args.num_envs,
     "model":{
             "vf_share_layers" : True,
-
     },
     "kl_coeff" : args.kl_coeff,
     "clip_param" : args.clip_param,
@@ -74,15 +75,17 @@ beogym_config = {
         },
     "observation_filter":"NoFilter",
     "num_workers":args.num_workers,
-    "rollout_fragment_length" : 10,
+    "rollout_fragment_length" : 1000,
     "num_envs_per_worker" : args.num_envs,
     'model':{
                 "use_lstm": True,
-                "lstm_cell_size": 64,
+                "lstm_cell_size": 256,
                 "lstm_use_prev_action" : True,
                 "lstm_use_prev_reward" : True,
                 "vf_share_layers": True,
                 "conv_filters": [[16, 3, 2], [32, 3, 2], [64, 3, 2], [128, 3, 2], [256, 3, 2]],
+                "conv_activation":'relu',
+                "post_fcnet_hiddens":[],
             },
     "kl_coeff" : args.kl_coeff,
     "clip_param" : args.clip_param,
@@ -92,22 +95,9 @@ beogym_config = {
     "train_batch_size":args.buffer_size,
     "sgd_minibatch_size":args.batch_size,
     "num_sgd_iter":args.num_epoch,
-    # Use GPUs iff `RLLIB_NUM_GPUS` env var set to > 0.
     "num_gpus":args.num_gpus,
     "num_gpus_per_worker" : args.gpus_worker,
     "num_cpus_per_worker":args.cpus_worker
     }
 
 
-"""
-
-hyperparam_mutations = {
-    "lambda": lambda: random.uniform(0.9, 1.0),
-    "clip_param": lambda: random.uniform(0.01, 0.5),
-    "lr": [1e-3, 5e-4, 1e-4, 5e-5, 1e-5],
-    "num_sgd_iter": lambda: random.randint(1, 30),
-    "sgd_minibatch_size": lambda: random.randint(128, 16384),
-    "train_batch_size": lambda: random.randint(2000, 160000),
-}
-
-"""

@@ -35,21 +35,13 @@ if __name__ == "__main__":
     torch, nn = try_import_torch()
     args = get_args()
 
-    #extract data from the config file
-    if args.machine != "":
-        with open(configs.resource_file, 'r') as cfile:
-            config_data = yaml.safe_load(cfile)
 
-        #update the args in the config.py file
-        print("updating resource parameters")
-        args.num_workers, args.num_envs, args.num_gpus, args.gpus_worker, args.cpus_worker, _, _ = config_data[args.machine]
-    
     ray.init(local_mode=args.local_mode)
 
     
     #log directory
     suffix = datetime.datetime.now().strftime("%y_%m_%d_%H_%M_%S")
-    str_logger = args.prefix + "_" + args.set + "_" + args.setting + "_" + args.shared + "_" + args.backbone + "_" + args.policy + "_" + args.temporal + "/" + suffix
+    str_logger = args.temporal + "/" + args.prefix + "_" + args.set + "_" + args.setting + "_" + args.shared + "_" + args.backbone + "_" + args.policy + "_" + args.temporal + "/" + suffix
 
     #training, once finished, save the logs
     

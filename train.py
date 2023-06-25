@@ -14,7 +14,6 @@ import configs
 #import graph_tool.all as gt
 from ray.rllib.utils.annotations import override
 from ray import air, tune
-from ray.tune.schedulers import PopulationBasedTraining
 from ray.rllib.algorithms.ppo import PPO
 from ray.tune.registry import register_env
 from ray.rllib.env.env_context import EnvContext
@@ -33,13 +32,17 @@ from ray.rllib.evaluation import Episode, RolloutWorker
 from ray.rllib.algorithms.algorithm_config import AlgorithmConfig
 from models.atarimodels import SingleAtariModel, SharedBackboneAtariModel, SharedBackbonePolicyAtariModel
 # from models.beogymmodels import SingleBeogymModel, SharedBackboneBeogymModel, SharedBackbonePolicyBeogymModel
+from ray.rllib.algorithms.ppo import PPOConfig
 from typing import Dict, Tuple
+import gym
+from gym import spaces
 from ray.rllib.policy.sample_batch import SampleBatch
 import specs
 from IPython import embed
 from ray.rllib.algorithms.algorithm import Algorithm
 from typing import List, Optional, Type, Union
 from ray.rllib.utils.typing import AlgorithmConfigDict, ResultDict
+from ray.tune.schedulers import PopulationBasedTraining, pb2
 args = get_args()
 
 #Only 4 functions
@@ -49,11 +52,56 @@ args = get_args()
 
 #use_lstm needs to be incorporated here
 
-class CustomPPO(PPO):
+class MultiPPO(PPO):
     def get_default_policy_class(self, config: AlgorithmConfigDict) -> Type[Policy]:
         if config["framework"] == "torch":
-            from torchppo import PPOTorchPolicy
+            from multippo import PPOTorchPolicy
             return PPOTorchPolicy
+
+
+def explore(config):
+        # ensure we collect enough timesteps to do sgd
+        if config["train_batch_size"] < config["sgd_minibatch_size"] * 2:
+            config["train_batch_size"] = config["sgd_minibatch_size"] * 2
+        # ensure we run at least one sgd iter
+        if config["num_sgd_iter"] < 1:
+            config["num_sgd_iter"] = 1
+        return config
+
+pbt_hyperparam_mutations = {
+    "lambda": lambda: random.uniform(0.9, 1.0),
+    "clip_param": lambda: random.uniform(0.01, 0.5),
+    "lr": [1e-3, 5e-4, 1e-4, 5e-5, 1e-5],
+    "num_sgd_iter": lambda: random.randint(1, 30),
+    "sgd_minibatch_size": lambda: random.randint(128, 16384),
+    "train_batch_size": lambda: random.randint(2000, 160000),
+    }
+
+pb2_hyperparam_mutations = {
+    "lambda": [0.9, 1.0],
+    "clip_param": [0.01, 0.5],
+    "lr": [1e-3, 1e-5],
+    "num_sgd_iter": [1, 30],
+    "sgd_minibatch_size": [128, 16384],
+    "train_batch_size": [2000, 160000],
+    }
+
+pbt = PopulationBasedTraining(
+    time_attr="time_total_s",
+    perturbation_interval=120,
+    resample_probability=0.25,
+    # Specifies the mutations of these hyperparams
+    hyperparam_mutations=pbt_hyperparam_mutations,
+    custom_explore_fn=explore,
+    )
+
+pb2 = pb2.PB2(
+    time_attr="time_total_s",
+    perturbation_interval=50000,
+    quantile_fraction=0.25,  # copy bottom % with top % (weights)
+    # Specifies the hyperparam search space
+    hyperparam_bounds=pb2_hyperparam_mutations
+    )
 
 
 def pick_config_env(str_env):
@@ -78,12 +126,37 @@ def pick_config_env(str_env):
 #No Sequential transfer. Single task on all envs.
 def rllib_loop(config, str_logger):
 
+    #final modifications in the config
+    if args.temporal == "lstm" or args.temporal == "attention":
+        args.stop_timesteps = 50000000
+        config["sgd_minibatch_size"] = 1000
+        config["train_batch_size"] = 10000
+    
     #load the config
-    algo = CustomPPO(config=config)
+    #extract data from the config file
+    if args.machine != "":
+        with open(configs.resource_file + '/' + args.env_name + '.yaml', 'r') as cfile:
+            config_data = yaml.safe_load(cfile)
 
-    #embed()
+        #update the args in the config.py file
+        print("updating resource parameters")
+        args.num_workers, args.num_envs, args.num_gpus, args.gpus_worker, args.cpus_worker, _, args.data_path = config_data[args.machine]
+        
+    config.update(
+                {"num_workers" : args.num_workers,
+                "num_envs_per_worker" : args.num_envs,
+                "num_gpus" : args.num_gpus, 
+                "num_gpus_per_worker" : args.gpus_worker, 
+                "num_cpus_per_worker": args.cpus_worker
+                }
+        )
+    
+    if args.env_name=='beogym':
+        config['env_config']['data_path']=args.data_path
+    
+    print(config)
+    print("lksjfklaslk;f;sdjkl;jf", args.pbt)
 
-    plc = algo.get_policy()
 
     """
     #Only train the backbone if backbone is e2e
@@ -104,31 +177,54 @@ def rllib_loop(config, str_logger):
             if 'cnn' in params:
                 plc[i] = res_wts[i]
     """
-
     if args.setting == 'seqgame' and config['env'] != configs.all_envs[0]:
         policy_ckpt = Policy.from_checkpoint(args.ckpt + "/" + args.prefix + "/checkpoint")
         plc.set_weights(policy_ckpt.get_weights())
 
+  
+    if args.no_tune:
+        if "multiagent" in config:
+            algo = MultiPPO(config=config)
+            print("Using MultiPPO")
+        else:
+            algo = PPO(config=config)
 
-    # run manual training loop and print results after each iteration
-    if args.temporal != "4stack":
-        args.stop_timesteps = 50000000
-    for _ in range(args.stop_timesteps):
-        result = algo.train()
-        print(pretty_print(result))
-        # stop training of the target train steps or reward are reached
-        #MAKE SURE YOU KEEP SAVING CHECKPOINTS
-        if result["timesteps_total"] >= args.stop_timesteps:
-            policy = algo.get_policy()
-            policy.export_checkpoint(args.ckpt + "/" + str_logger + "/checkpoint")
-            break
-    algo.stop()
+        plc = algo.get_policy()
+
+        # run manual training loop and print results after each iteration
+        for _ in range(args.stop_timesteps):
+            result = algo.train()
+            print(pretty_print(result))
+            
+            # stop training of the target train steps or reward are reached
+            #MAKE SURE YOU KEEP SAVING CHECKPOINTS
+            if result["timesteps_total"] >= args.stop_timesteps:
+                policy = algo.get_policy()
+                policy.export_checkpoint(args.ckpt + "/" + str_logger + "/checkpoint")
+                break
+        algo.stop()
+
+
+    else:
+
+        tuner = tune.Tuner(
+        "PPO",
+        tune_config=tune.TuneConfig(
+            metric="episode_reward_mean",
+            mode="max",
+            scheduler=pbt,
+            num_samples=4,
+        ),
+        param_space=config,
+        run_config=air.RunConfig(stop={
+            "timesteps_total": args.stop_timesteps,
+            }),
+        )
+        results = tuner.fit()
 
 
 #ADD PREPROCESSOR TO STR_LOGGER
 #DO THE RANDOM TRIALS
-
-from ray.rllib.env.wrappers.atari_wrappers import wrap_deepmind
 
 
 #Train singleenv.
@@ -140,52 +236,53 @@ from ray.rllib.env.wrappers.atari_wrappers import wrap_deepmind
 def single_train(str_logger, backbone='e2e', policy=None):
 
     # modify atari_config to incorporate the environments
-    #construct the environment from envs.py based on the env_name
-    str_env = 'single' if args.setting == 'singlegame' else 'parellel'
-    use_config, use_env = pick_config_env(str_env)
-    env_config = {}
+    #construct the environment from envs.py based on the env_name 
+    use_config, use_env = pick_config_env('single')
+    env_config = {'env': args.set, 'framestack': args.temporal == '4stack'}
 
+    if args.backbone == "e2e":
+        args.train_backbone = True
     if args.env_name == 'atari':
         ModelCatalog.register_custom_model("model", SingleAtariModel)
-        print("using visionnet", use_env, use_config)
+        # modify atari_config to incorporate the current environment
+        #do all the config overwrites here
+        use_config.update(
+                    {
+                        "env" : use_env,
+                        "env_config": env_config,
+                        "logger_config" : {
+                            "type": UnifiedLogger,
+                            "logdir": os.path.expanduser(args.log + '/' + str_logger)
+                        },
+                        "model": {
+                            "custom_model": "model",
+                            "vf_share_layers": True,
+                            "conv_filters": [[16, [8, 8], 4], [32, [4, 4], 2], [512, [11, 11], 1],],
+                            "conv_activation" : "relu" if args.temporal == '4stack' else "elu",
+                            "custom_model_config" : {"backbone": args.backbone, "backbone_path": configs.map_models[args.backbone], "train_backbone": args.train_backbone},
+                            "framestack": args.temporal == '4stack',
+                            "use_lstm": args.temporal == 'lstm',
+                            "use_attention": args.temporal == 'attention',
+                        },
+                    }
+                )
+
+
     elif args.env_name == 'beogym':
         ModelCatalog.register_custom_model("model", SingleBeogymModel)
-
-    if str_env == 'parellel': 
-        env_config = {'envs': configs.all_envs}
-        #use_env = envs.MultiAtariEnv
-    else:
-        env_config = {'env': args.set, 'framestack': args.temporal == '4stack'}
+        #use_config.update(
+        #            {
+        #                "env" : use_env,
+        #                "env_config": env_config,
+        #                "logger_config" : {
+        #                    "type": UnifiedLogger,
+        #                    "logdir": os.path.expanduser(args.log + '/' + str_logger)
+        #                }
+        #            }
+        #        )
  
 
-    # modify atari_config to incorporate the current environment
-    #do all the config overwrites here
-    use_config.update(
-                {
-                    "env" : use_env,
-                    "preprocessor_pref": "rllib",
-                    "env_config": env_config,
-                    "logger_config" : {
-                        "type": UnifiedLogger,
-                        "logdir": os.path.expanduser(args.log + '/' + str_logger)
-                    },
-                    "model": {
-                        "custom_model" : "model",
-                        "conv_filters": [[16, [8, 8], 4], [32, [4, 4], 2], [512, [11, 11], 1],],
-                        "conv_activation" : "elu" if args.temporal != '4stack' else "relu",
-                        "custom_model_config" : {"backbone": args.backbone, "backbone_path": configs.map_models[args.backbone], "freeze_backbone": args.freeze_backbone},
-                        "framestack": args.temporal == '4stack',
-                        "use_lstm": args.temporal == 'lstm',
-                        "use_attention": args.temporal == 'attention',
-                        "vf_share_layers": True
-                    },
-                }
-            )
-    
-    if str_env == 'parellel':
-        use_config.update({"callbacks": envs.ParellelCallbacks})
 
-    print(use_config, use_config["model"])
 
     #start the training loop
     rllib_loop(use_config, str_logger)
@@ -240,25 +337,32 @@ def train_multienv(str_logger):
     #register the model
     if args.shared == "full":
         mods = [SingleAtariModel]*len(configs.all_envs)
-    
-    elif "backbone" in args.shared:
-        mods = [SharedBackboneAtariModel]*len(configs.all_envs)
+        ModelCatalog.register_custom_model("model", SingleAtariModel)
     
     elif "policy" in args.shared:
         mods = [SharedBackbonePolicyAtariModel]*len(configs.all_envs)
+        for i in range(len(configs.all_envs)):
+            ModelCatalog.register_custom_model("model_" + str(i), mods[i])
 
-    print(mods)
+    elif "backbone" in args.shared:
+        mods = [SharedBackboneAtariModel]*len(configs.all_envs)
+        for i in range(len(configs.all_envs)):
+            ModelCatalog.register_custom_model("model_" + str(i), mods[i])
+    
+    else:
+        raise NotImplementedError
         
-    for i in range(len(configs.all_envs)):
-        ModelCatalog.register_custom_model("model_" + str(i), mods[i])
+    print(mods)
+
+
     
 
     policies = {"policy_{}".format(i): specs.gen_policy(i) for i in range(len(configs.all_envs))}
     
     policy_ids = ["policy_{}".format(i) for i in range(len(configs.all_envs))]
-    envs=len(mods)
+
     def policy_mapping_fn(agent_id, episode, worker, **kwargs):
-        pol_id = policy_ids[agent_id%envs]
+        pol_id = policy_ids[agent_id%len(mods)]
         return pol_id
     print(use_env)
     # modify atari_config to incorporate the current environment
@@ -288,10 +392,13 @@ def train_multienv(str_logger):
                         "policy_mapping_fn" : policy_mapping_fn,
 
                     },
-                    #"callbacks": envs.MultiCallbacks
+                    "callbacks": envs.MultiCallbacks
             }
         )
 
+    if args.shared == "full":
+        use_config["multiagent"]["policies"] = {"model"}
+        use_config["multiagent"]["policy_mapping_fn"] = (lambda agent_id, episode, **kwargs: "model")
 
     #multistuff is a tuple
     #adapter and policy is a list

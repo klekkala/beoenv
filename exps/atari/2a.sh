@@ -1,1 +1,1 @@
-python main.py --train --eval --set=all --setting=seqgame --expname=full --backbone=e2e --prefix 2.a
+python main.py --train --eval --set=all --setting=seqgame --expname=full --backbone=e2e --prefix 2.a --machine $1

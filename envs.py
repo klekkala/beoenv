@@ -12,6 +12,8 @@ import random
 from ray.rllib.policy.sample_batch import SampleBatch
 from ray.rllib.env.wrappers.atari_wrappers import FrameStack, WarpFrame, NoopResetEnv, MonitorEnv, MaxAndSkipEnv, FireResetEnv
 import ray
+from IPython import embed
+#import graph_tool.all as gt
 from ray import air, tune
 from ray.rllib.algorithms.algorithm import Algorithm
 from ray.rllib.policy.policy_template import build_policy_class
@@ -66,28 +68,18 @@ class MultiCallbacks(DefaultCallbacks):
     env_index: int,
     **kwargs
     ):
-    # Check if there are multiple episodes in a batch, i.e.
-    # "batch_mode": "truncate_episodes".
-        if worker.policy_config["batch_mode"] == "truncate_episodes":
-        # Make sure this episode is really done.
-            assert episode.batch_builder.policy_collectors["default_policy"].batches[
-                -1
-            ]["dones"][-1], (
-                "ERROR: `on_episode_end()` should only be called "
-                "after episode is done!"
-            )
-        episode.custom_metrics[base_env.vector_env.envs[0].name] = episode.total_reward
+        env_keys = list(episode.agent_rewards.keys())
+        for each_id in range(len(env_keys)):
+            episode.custom_metrics[base_env.envs[0].envs[env_keys[each_id][0]]] = episode.agent_rewards[(env_keys[each_id][0], env_keys[each_id][1])]
 
 
 class SingleAtariEnv(gym.Env):
     def __init__(self, env_config):
-        print("I'm using single env lksjdflkasklfdkaskdlfj", env_config['env'])
         #if env_config['framestack']:
         self.env = wrap_custom(gym.make(env_config['env'], full_action_space=True), framestack=env_config['framestack'])
 
         self.action_space = self.env.action_space
         self.observation_space = self.env.observation_space
-        print(self.observation_space)
 
     def reset(self, **kwargs):
         return self.env.reset(**kwargs)
@@ -95,22 +87,6 @@ class SingleAtariEnv(gym.Env):
     def step(self, action):
         return self.env.step(action)
 
-class ParellelAtariEnv(gym.Env): 
-    def __init__(self, env_config):
-        for i in range(len(env_config['envs'])):
-            #print(env_config.worker_index, env_config['envs'])
-            if env_config.worker_index%len(env_config['envs'])==i:
-                self.env = wrap_custom(gym.make(env_config['envs'][i], full_action_space=True))
-                self.name= env_config['envs'][i]
-        self.action_space = self.env.action_space
-        self.observation_space = self.env.observation_space
-        print(self.observation_space)
-
-    def reset(self, **kwargs):
-        return self.env.reset(**kwargs)
-
-    def step(self, action):
-        return self.env.step(action)
 
 
 class MultiAtariEnv(MultiAgentEnv):
@@ -120,7 +96,7 @@ class MultiAtariEnv(MultiAgentEnv):
             self.envs = env_config['envs']
             for i in range(len(env_config['envs'])):
                 print(env_config['envs'][i])
-                env=wrap_custom(gym.make(env_config['envs'][i], full_action_space=True))
+                env=wrap_custom(gym.make(env_config['envs'][i], full_action_space=False))
                 self.agents.append(env)
             self.dones = set()
             #This is a bad habbit. change it.
@@ -150,12 +126,14 @@ class MultiAtariEnv(MultiAgentEnv):
 
 
 
-atari = {'single': SingleAtariEnv, 'parellel': ParellelAtariEnv, 'multi': MultiAtariEnv}
+atari = {'single': SingleAtariEnv, 'multi': MultiAtariEnv}
 
 #Henghui Todo
 #class SingleBeoEnv((gym.Env))
 class SingleBeoEnv(gym.Env):
     def __init__(self,env_config):
+        import graph_tool.all as gt
+        from beogym.beogym import BeoGym
         self.env = BeoGym({'city':env_config['env'], 'data_path':env_config['data_path']})
         self.action_space = self.env.action_space
         self.observation_space = self.env.observation_space

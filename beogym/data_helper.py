@@ -2,7 +2,7 @@ import graph_tool.all as gt
 import pickle
 import time
 
-import plyvel,shutil
+import shutil
 
 #import Equirec2Perspec as E2P
 import beogym.Equirec2Perspec_cpu as E2P
@@ -343,11 +343,11 @@ class dataHelper():
             return (-45.04695452668559, -50.39745826654991)
         elif self.city=='Hudson_River':
             return (93.1395291367042, -0.7047850456277587)
-        return (-61.63857417592947, -64.93267436677775)
-        random_loc = random.choice(list(self.Gdict.keys()))
-        print('random')
-        print(random_loc)
-        return random_loc
+        # return (-61.63857417592947, -64.93267436677775)
+        # random_loc = random.choice(list(self.Gdict.keys()))
+        # print('random')
+        # print(random_loc)
+        # return random_loc
         #return (25.435566549339654, 44.19074421319752)
         #return self.route[0]
         #return (1.3984153906729517, -24.730699803708518)
@@ -444,8 +444,8 @@ class dataHelper():
         # Check the current view angle against the search angle range:
         if direction == "forward":
 
-            left_bound = self.fix_angle(center_angle + 45)
-            right_bound = self.fix_angle(center_angle - 45)
+            left_bound = self.fix_angle(center_angle + 30)
+            right_bound = self.fix_angle(center_angle - 30)
 
             if self.angle_in_range(curr_angle, (right_bound, left_bound)):
                 search_angle_range = (right_bound, left_bound)
@@ -454,8 +454,8 @@ class dataHelper():
 
         elif direction == "backward":
 
-            left_bound = self.fix_angle(self.fix_angle(center_angle + 180) + 45)
-            right_bound = self.fix_angle(self.fix_angle(center_angle + 180) - 45)
+            left_bound = self.fix_angle(self.fix_angle(center_angle + 180) + 30)
+            right_bound = self.fix_angle(self.fix_angle(center_angle + 180) - 30)
 
             if self.angle_in_range(curr_angle, (right_bound, left_bound)):
                 search_angle_range = (left_bound, right_bound)

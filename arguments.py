@@ -48,7 +48,7 @@ def get_args():
         "--policy", type=str, default="PolicyNotLoaded", help="ALE/Pong-v5"
     )    
     parser.add_argument(
-        "--temporal", type=str, choices=["attention", "lstm", "4stack"], default="4stack", help="temporal model"
+        "--temporal", type=str, choices=["attention", "lstm", "4stack", "notemp"], default="4stack", help="temporal model"
     )
     parser.add_argument(
         "--prefix", type=str, default="1.a", help="which baseline is it"
@@ -57,10 +57,13 @@ def get_args():
         "--train", action='store_true'
     )
     parser.add_argument(
-        "--freeze_backbone", action='store_true'
+        "--train_backbone", action='store_true'
     )
     parser.add_argument(
         "--eval", action='store_true'
+    )
+    parser.add_argument(
+        "--pbt", default=False, action='store_true'
     )
     parser.add_argument(
         "--stop_timesteps", type=int, default=25000000, help="Number of timesteps to train."
@@ -114,9 +117,9 @@ def get_args():
 
     #use_lstm or framestacking
     parser.add_argument(
-        "--tune",
+        "--no_tune",
         action="store_true",
-        default=False,
+        default=True,
         help="Run with/without Tune using a manual train loop instead. If ran without tune, use PPO without grid search and no TensorBoard.",
     )
 

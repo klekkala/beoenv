@@ -123,7 +123,7 @@ class Agent():
             move = True
 
         if self.pano_mode:
-            self.curr_view = self.dh.panorama_split(self.curr_angle, curr_pos, self.view_res,move)
+            self.curr_view = self.dh.panorama_split(self.curr_angle, new_pos, self.view_res,move)
         else:
             self.curr_view = self.dh.get_image_orientation(self.agent_pos_curr, self.curr_camera)
 

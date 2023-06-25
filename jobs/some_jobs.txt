@@ -1,0 +1,27 @@
+CUDA_VISIBLE_DEVICES=5,6 python main.py --train --eval --set=CarnivalNoFrameskip-v4 --setting=singlegame --shared=full --backbone=random --temporal lstm --machine iGpu10 && CUDA_VISIBLE_DEVICES=5,6 python main.py --train --eval --set=DemonAttackNoFrameskip-v4 --setting=singlegame --shared=full --backbone=random --temporal lstm --machine iGpu10 && CUDA_VISIBLE_DEVICES=5,6 python main.py --train --eval --set=PhoenixNoFrameskip-v4 --setting=singlegame --shared=full --backbone=random --temporal lstm --machine iGpu10
+
+notemp
+AirRaidNoFrameskip-v4
+AirRaidNoFrameskip-v4
+AirRaidNoFrameskip-v4
+AssaultNoFrameskip-v4
+AssaultNoFrameskip-v4
+AssaultNoFrameskip-v4
+BeamRiderNoFrameskip-v4
+BeamRiderNoFrameskip-v4
+BeamRiderNoFrameskip-v4
+CarnivalNoFrameskip-v4
+CarnivalNoFrameskip-v4
+CarnivalNoFrameskip-v4
+DemonAttackNoFrameskip-v4
+DemonAttackNoFrameskip-v4
+DemonAttackNoFrameskip-v4
+PhoenixNoFrameskip-v4
+PhoenixNoFrameskip-v4
+PhoenixNoFrameskip-v4
+RiverraidNoFrameskip-v4
+RiverraidNoFrameskip-v4
+RiverraidNoFrameskip-v4
+SpaceInvadersNoFrameskip
+SpaceInvadersNoFrameskip
+SpaceInvadersNoFrameskip

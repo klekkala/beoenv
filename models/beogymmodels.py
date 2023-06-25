@@ -21,6 +21,7 @@ from ray.rllib.policy.sample_batch import SampleBatch
 from ray.rllib.utils.annotations import override
 from ray.rllib.utils.framework import try_import_torch
 from vaemodel import Encoder
+from ray.rllib.models.torch.complex_input_net import ComplexInputNetwork
 
 torch, nn = try_import_torch()
 
@@ -54,3 +55,6 @@ class SingleBeogymModel(TorchModelV2, nn.Module):
 
 
 
+class SharedBackboneAtariModel(ComplexInputNetwork):
+        def __init__(self, observation_space, action_space, num_outputs, model_config, name):
+            super().__init__(observation_space, action_space, num_outputs, model_config, name)
