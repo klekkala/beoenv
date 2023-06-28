@@ -22,6 +22,7 @@ from ray.rllib.utils.framework import try_import_torch
 from ray.rllib.models.torch.visionnet import VisionNetwork
 from vaemodel import StackEncoder as StackEncoder
 from atari_vae import VAE as VAE
+from atari_vae import LSTMVAE as LSTMVAE
 from IPython import embed
 
 from ray.rllib.models.torch.misc import (
@@ -58,16 +59,26 @@ class SingleAtariModel(VisionNetwork):
     ):
         super().__init__(observation_space, action_space, num_outputs, model_config, name)
 
-        if 'e2e' not in model_config['custom_model_config']['backbone'] and model_config['custom_model_config']['backbone'] != 'random':
-
-            if '1channel' in model_config['custom_model_config']['backbone']:
+        #if 'e2e' not in model_config['custom_model_config']['backbone'] and model_config['custom_model_config']['backbone'] != 'random':
+        if 'e2e' not in model_config['custom_model_config']['backbone']:
+            if model_config['custom_model_config']['backbone'] == 'random':
+                self._convs = VAE(channel_in=observation_space.shape[-1], z=512)
+            elif '1chan' in model_config['custom_model_config']['backbone']:
                 self._convs = VAE(channel_in=1, z=512)
-            elif '3channel' in model_config['custom_model_config']['backbone']:
-                self._convs = VAE(channel_in=3, z=512)
             elif '4stack' in model_config['custom_model_config']['backbone']:
                 self._convs = VAE(channel_in=4, z=512)
             else:
                 raise NotImplementedError("vae model not implemented")
+        #elif model_config['custom_model_config']['backbone'] == 'e2e':
+        #    
+        #    if model_config['custom_model_config']['temporal'] == 'lstm' or model_config['custom_model_config']['temporal'] == 'attention':
+        #        self._convs = LSTMVAE(channel_in=observation_space.shape[-1], z=512)
+        #    else:
+        #        self._convs = VAE(channel_in=observation_space.shape[-1], z=512)
+        #else:
+        #    raise NotImplementedError("lol")
+        
+        
         if model_config['custom_model_config']['backbone_path'] != None:
             print(model_config['custom_model_config']['backbone_path'])
             print("loading model weights")

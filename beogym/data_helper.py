@@ -62,8 +62,8 @@ class dataHelper():
         self.route=[(1.3984153906729517, -24.730699803708518), (12.281358723435147, -14.786001935545627), (25.395387695338428, 1.13332033476172), (35.49040814970007, 23.44676699952089)]
         self.route_loc=0
         self.path_loc=0
-        self.equ = E2P.Equirectangular(data_path)
         self.city = city
+        self.equ = E2P.Equirectangular(data_path, self.city)
         # Create canvas for plot rendering:
         self.xdata = []
         self.ydata = []
@@ -311,11 +311,74 @@ class dataHelper():
         print(self.G)
         plt.savefig("filename5.png")
 
+    def build_6city(self):
+        NYC = ['Wall_Street','Union_Square', 'Hudson_River']
+        Pits= ['CMU', 'Allegheny', 'South_Shore']
+        if self.city in NYC:
+            self.G = gt.load_graph("beogym/nyc.gt")
+            self.Gdict = pickle.load(open('beogym/nycgraph.pkl', 'rb'))
+            self.Greversed={value: key for key, value in self.Gdict.items()}
+        elif self.city in Pits:
+            self.G = gt.load_graph("beogym/pits.gt")
+            self.Gdict = pickle.load(open('beogym/pitsgraph.pkl', 'rb'))
+            self.Greversed={value: key for key, value in self.Gdict.items()}
+
+
+        depth=0
+        vertices=set()
+        vfilt = self.G.new_vertex_property('bool');
+        new_dict={}
+
+
+        
+        Wall_Street = [(-89.8135819320945, -86.99411624217562),7224]
+        Union_Square = [(-21.67198697935339, -22.411925691329387),15525]
+        Hudson_River = [(85.92341169389903, -12.685304196935363),18085]
+        CMU = [(-26.740129338424083, 93.62126227277517), 15947]
+        Allegheny = [(95.86598041695194, -64.54825006689578), 14073]
+        South_Shore = [(-45.15996521572513, -55.452800619759564), 14967]
+
+
+        if self.city == 'Wall_Street':    
+            chosen_city = Wall_Street
+        elif self.city == 'Union_Square':
+            chosen_city = Union_Square
+        elif self.city == 'Hudson_River':
+            chosen_city = Hudson_River
+        elif self.city == 'CMU':
+            chosen_city = CMU
+        elif self.city == 'Allegheny':
+            chosen_city = Allegheny
+        elif self.city == 'South_Shore':
+            chosen_city = South_Shore
+        else:
+            chosen_city = None
+        if chosen_city!=None:
+            for e in gt.bfs_iterator(self.G, self.G.vertex(self.Gdict[chosen_city[0]])):
+                vertices.add(e.source())
+                vertices.add(e.target())
+                vfilt[e.source()] = True
+                vfilt[e.target()] = True
+                new_dict[self.Greversed[e.source()]]=e.source()
+                new_dict[self.Greversed[e.target()]]=e.target()
+                if len(vertices)==chosen_city[1]:
+                    break
+            Gdict=new_dict
+            Greversed={value: key for key, value in Gdict.items()}
+            sub = gt.GraphView(self.G, vfilt)
+            self.G = sub
+            self.Gdict = Gdict
+            self.Greversed=Greversed
+        print(self.G)
+        plt.savefig("filename5.png")
+
+
     def read_routes(self, csv_file="beogym/data/pano_gps.csv"):
         data = pd.read_csv(csv_file, keep_default_na=False, dtype='str')
         if app_config.PANO_IMAGE_LIMIT:
             data = data[:app_config.PANO_IMAGE_LIMIT]
-        self.build_graph(data,csv_file)
+        # self.build_graph(data,csv_file)
+        self.build_6city()
 
     def find_adjacent(self, pos, action="next"):
         # print("Finding next position based on action/direction and position \n")
@@ -343,6 +406,13 @@ class dataHelper():
             return (-45.04695452668559, -50.39745826654991)
         elif self.city=='Hudson_River':
             return (93.1395291367042, -0.7047850456277587)
+        elif self.city == 'CMU':
+            return (-26.740129338424083, 93.62126227277517)
+        elif self.city == 'Allegheny':
+            return (95.86598041695194, -64.54825006689578)
+        elif self.city == 'South_Shore':
+            return (-45.15996521572513, -55.452800619759564)
+
         # return (-61.63857417592947, -64.93267436677775)
         # random_loc = random.choice(list(self.Gdict.keys()))
         # print('random')

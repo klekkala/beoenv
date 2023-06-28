@@ -16,14 +16,31 @@ import configs
 from ray.rllib.models import ModelCatalog
 import gym
 import numpy as np
+from arguments import get_args
+args = get_args()
 
-
+#THIS IS ONLY TESTED FOR ATARI. IT WONT WORK FOR BEOGYM!!!
 def gen_policy(i):
-    obs_space = gym.spaces.Box(0, 255, (84, 84, 4), np.uint8)
-    act_space = gym.spaces.Discrete(18)
+    if args.temporal == '4stack':
+        obs_space = gym.spaces.Box(0, 255, (84, 84, 4), np.uint8)
+    else:
+        obs_space = gym.spaces.Box(0, 255, (84, 84, 1), np.uint8)
+    
+    if args.backbone == "e2e":
+        args.train_backbone = True
+
+    #6D action space
+    act_space = gym.spaces.Discrete(6)
     config = {
         "model": {
-            "custom_model": "model_" + str(i)
+            "custom_model": "model_" + str(i),
+            "vf_share_layers": True,
+            "conv_filters": [[16, [8, 8], 4], [32, [4, 4], 2], [512, [11, 11], 1],],
+            "conv_activation" : "relu" if args.temporal == '4stack' else "elu",
+            "custom_model_config" : {"backbone": args.backbone, "backbone_path": configs.map_models[args.backbone], "train_backbone": args.train_backbone},
+            "framestack": args.temporal == '4stack',
+            "use_lstm": args.temporal == 'lstm',
+            "use_attention": args.temporal == 'attention',    
         }
     }
     #return PolicySpec(config=config)

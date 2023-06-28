@@ -128,10 +128,9 @@ def rllib_loop(config, str_logger):
 
     #final modifications in the config
     if args.temporal == "lstm" or args.temporal == "attention":
-        args.stop_timesteps = 50000000
-        config["sgd_minibatch_size"] = 1000
-        config["train_batch_size"] = 10000
+        args.stop_timesteps = 75000000
     
+    print("program running for, ", args.stop_timesteps)
     #load the config
     #extract data from the config file
     if args.machine != "":
@@ -155,7 +154,6 @@ def rllib_loop(config, str_logger):
         config['env_config']['data_path']=args.data_path
     
     print(config)
-    print("lksjfklaslk;f;sdjkl;jf", args.pbt)
 
 
     """
@@ -177,6 +175,7 @@ def rllib_loop(config, str_logger):
             if 'cnn' in params:
                 plc[i] = res_wts[i]
     """
+
     if args.setting == 'seqgame' and config['env'] != configs.all_envs[0]:
         policy_ckpt = Policy.from_checkpoint(args.ckpt + "/" + args.prefix + "/checkpoint")
         plc.set_weights(policy_ckpt.get_weights())
@@ -204,7 +203,7 @@ def rllib_loop(config, str_logger):
                 break
         algo.stop()
 
-
+    """
     else:
 
         tuner = tune.Tuner(
@@ -222,7 +221,7 @@ def rllib_loop(config, str_logger):
         )
         results = tuner.fit()
 
-
+    """
 #ADD PREPROCESSOR TO STR_LOGGER
 #DO THE RANDOM TRIALS
 
@@ -242,44 +241,24 @@ def single_train(str_logger, backbone='e2e', policy=None):
 
     if args.backbone == "e2e":
         args.train_backbone = True
+
     if args.env_name == 'atari':
         ModelCatalog.register_custom_model("model", SingleAtariModel)
-        # modify atari_config to incorporate the current environment
-        #do all the config overwrites here
-        use_config.update(
-                    {
-                        "env" : use_env,
-                        "env_config": env_config,
-                        "logger_config" : {
-                            "type": UnifiedLogger,
-                            "logdir": os.path.expanduser(args.log + '/' + str_logger)
-                        },
-                        "model": {
-                            "custom_model": "model",
-                            "vf_share_layers": True,
-                            "conv_filters": [[16, [8, 8], 4], [32, [4, 4], 2], [512, [11, 11], 1],],
-                            "conv_activation" : "relu" if args.temporal == '4stack' else "elu",
-                            "custom_model_config" : {"backbone": args.backbone, "backbone_path": configs.map_models[args.backbone], "train_backbone": args.train_backbone},
-                            "framestack": args.temporal == '4stack',
-                            "use_lstm": args.temporal == 'lstm',
-                            "use_attention": args.temporal == 'attention',
-                        },
-                    }
-                )
-
 
     elif args.env_name == 'beogym':
         ModelCatalog.register_custom_model("model", SingleBeogymModel)
-        #use_config.update(
-        #            {
-        #                "env" : use_env,
-        #                "env_config": env_config,
-        #                "logger_config" : {
-        #                    "type": UnifiedLogger,
-        #                    "logdir": os.path.expanduser(args.log + '/' + str_logger)
-        #                }
-        #            }
-        #        )
+
+    #do all the config overwrites here
+    use_config.update(
+                {
+                    "env" : use_env,
+                    "env_config": env_config,
+                    "logger_config" : {
+                        "type": UnifiedLogger,
+                        "logdir": os.path.expanduser(args.log + '/' + str_logger)
+                    }
+                }
+            )
  
 
 
@@ -352,9 +331,8 @@ def train_multienv(str_logger):
     else:
         raise NotImplementedError
         
-    print(mods)
-
-
+    if args.backbone == "e2e":
+        args.train_backbone = True
     
 
     policies = {"policy_{}".format(i): specs.gen_policy(i) for i in range(len(configs.all_envs))}
@@ -376,17 +354,6 @@ def train_multienv(str_logger):
                         "type": UnifiedLogger,
                         "logdir": os.path.expanduser(args.log + '/' + str_logger)
                     },
-                    "model": {
-                        "custom_model" : "model",
-                        "conv_filters": [[16, [8, 8], 4], [32, [4, 4], 2], [512, [11, 11], 1],],
-                        "conv_activation" : "elu" if args.temporal != '4stack' else "relu",
-                        "custom_model_config" : {"backbone": args.backbone, "backbone_path": configs.map_models[args.backbone], "freeze_backbone": args.freeze_backbone},
-                        "framestack": args.temporal == '4stack',
-                        "use_lstm": args.temporal == 'lstm',
-                        "use_attention": args.temporal == 'attention',
-                        "vf_share_layers": True
-                    },
-
                     "multiagent": {
                         "policies" : policies,
                         "policy_mapping_fn" : policy_mapping_fn,

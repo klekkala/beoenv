@@ -22,10 +22,15 @@ def byte2str(b):
 
 
 class Equirectangular:
-    def __init__(self, data_path):
+    def __init__(self, data_path, city):
         count = 0
         self.wrong=0
-        self.db = rocksdb.DB(data_path+'manhattan/data/', rocksdb.Options(create_if_missing=False), read_only=True)
+        NYC = ['Wall_Street','Union_Square', 'Hudson_River']
+        Pits= ['CMU', 'Allegheny', 'South_Shore']
+        if city in NYC:
+            self.db = rocksdb.DB(data_path+'manhattan/data/', rocksdb.Options(create_if_missing=False), read_only=True)
+        elif city in Pits:
+            self.db = rocksdb.DB(data_path+'pittsburgh/data/', rocksdb.Options(create_if_missing=False), read_only=True)
         # self.db = rocksdb.DB('/home/tmp/kiran/manhattan/data0/', rocksdb.Options(create_if_missing=False), read_only=True)
         # self.db = plyvel.DB('/lab/tmpig10f/kiran/manhattan/data0/')
         self._img=None

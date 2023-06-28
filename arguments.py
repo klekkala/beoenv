@@ -87,10 +87,10 @@ def get_args():
         "--vf_clip", type=float, default=10.0, help="Number of timesteps to train."
     )
     parser.add_argument(
-        "--buffer_size", type=int, default=5000, help="Number of timesteps to train."
+        "--buffer_size", type=int, default=20000, help="Number of timesteps to train."
     )
     parser.add_argument(
-        "--batch_size", type=int, default=500, help="Number of timesteps to train."
+        "--batch_size", type=int, default=2000, help="Number of timesteps to train."
     )
     parser.add_argument(
         "--num_epoch", type=int, default=10, help="Number of timesteps to train."

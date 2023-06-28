@@ -2,9 +2,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 import glob
+from scipy.interpolate import interp1d
+import numpy as np
 def plot_csv_data(csv_file,out_file):
     # Read the CSV file into a pandas DataFrame
     data = pd.read_csv(csv_file)
+    # smooth=data.ewm(alpha=(1 - 0.85)).mean()
 
     # Group the data by the 'tag' column
     grouped_data = data.groupby(['tag','file'])
@@ -14,7 +17,13 @@ def plot_csv_data(csv_file,out_file):
 
     # Iterate through the groups and plot the data
     for tag, group in grouped_data:
-        ax.plot(group['step'], group['value'].interpolate(method='cubic'), label=tag)
+        # temp = interp1d(group['step'], group['value'],kind='cubic')
+        # X_=np.linspace(group['step'].min(), group['step'].max(), 500)
+        # Y_=temp(X_)
+        # ax.plot(X_, Y_, label=tag)
+        smooth=group['value'].ewm(alpha=(1 - 0.65)).mean()
+        ax.plot(group['step'], smooth, label=tag)
+        # ax.plot(group['step'], group['value'], label=tag)
 
     # Add labels and a legend
     ax.set_xlabel('Step')

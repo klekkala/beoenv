@@ -38,10 +38,13 @@ if __name__ == "__main__":
 
     ray.init(local_mode=args.local_mode)
 
+    #if the env_name is beogym.. then temporal mode is always lstm
+    if args.env_name == "beogym":
+        args.temporal = "lstm"
     
     #log directory
     suffix = datetime.datetime.now().strftime("%y_%m_%d_%H_%M_%S")
-    str_logger = args.temporal + "/" + args.prefix + "_" + args.set + "_" + args.setting + "_" + args.shared + "_" + args.backbone + "_" + args.policy + "_" + args.temporal + "/" + suffix
+    str_logger = args.temporal + "/" + args.prefix + "_" + args.set + "_" + args.setting + "_" + args.shared + "_" + args.backbone + "_" + args.policy + "_" + str(args.kl_coeff) + "_" + str(args.buffer_size) + "_" + str(args.batch_size) + "_" + args.temporal + "/" + suffix
 
     #training, once finished, save the logs
     
@@ -82,7 +85,7 @@ if __name__ == "__main__":
                 #train.single_train(str_logger)
                 train.train_multienv(str_logger)
             
-            elif args.prefix == "1.c" or args.prefix == "1.e" or args.prefix == "1.f" or args.prefix == "3.c.tr" or args.prefix == "1.d" or args.prefix == "3.d.tr" or args.prefix == "3.e.tr":
+            elif args.prefix == "1.c" or args.prefix == "1.d" or args.prefix == "1.f" or args.prefix == "3.c.tr" or args.prefix == "1.d" or args.prefix == "3.d.tr" or args.prefix == "3.e.tr":
                 train.train_multienv(str_logger)
 
     #Towards the end evaluation on the trained games to see the final reward
