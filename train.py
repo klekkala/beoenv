@@ -35,10 +35,14 @@ from models.atarimodels import SingleAtariModel, SharedBackboneAtariModel, Share
 from ray.rllib.algorithms.ppo import PPOConfig
 from typing import Dict, Tuple
 import gym
+import distutils.dir_util
 from gym import spaces
 from ray.rllib.policy.sample_batch import SampleBatch
 import specs
 from IPython import embed
+import shutil
+import distutils.dir_util
+from pathlib import Path
 from ray.rllib.algorithms.algorithm import Algorithm
 from typing import List, Optional, Type, Union
 from ray.rllib.utils.typing import AlgorithmConfigDict, ResultDict
@@ -58,50 +62,6 @@ class MultiPPO(PPO):
             from multippo import PPOTorchPolicy
             return PPOTorchPolicy
 
-
-def explore(config):
-        # ensure we collect enough timesteps to do sgd
-        if config["train_batch_size"] < config["sgd_minibatch_size"] * 2:
-            config["train_batch_size"] = config["sgd_minibatch_size"] * 2
-        # ensure we run at least one sgd iter
-        if config["num_sgd_iter"] < 1:
-            config["num_sgd_iter"] = 1
-        return config
-
-pbt_hyperparam_mutations = {
-    "lambda": lambda: random.uniform(0.9, 1.0),
-    "clip_param": lambda: random.uniform(0.01, 0.5),
-    "lr": [1e-3, 5e-4, 1e-4, 5e-5, 1e-5],
-    "num_sgd_iter": lambda: random.randint(1, 30),
-    "sgd_minibatch_size": lambda: random.randint(128, 16384),
-    "train_batch_size": lambda: random.randint(2000, 160000),
-    }
-
-pb2_hyperparam_mutations = {
-    "lambda": [0.9, 1.0],
-    "clip_param": [0.01, 0.5],
-    "lr": [1e-3, 1e-5],
-    "num_sgd_iter": [1, 30],
-    "sgd_minibatch_size": [128, 16384],
-    "train_batch_size": [2000, 160000],
-    }
-
-pbt = PopulationBasedTraining(
-    time_attr="time_total_s",
-    perturbation_interval=120,
-    resample_probability=0.25,
-    # Specifies the mutations of these hyperparams
-    hyperparam_mutations=pbt_hyperparam_mutations,
-    custom_explore_fn=explore,
-    )
-
-pb2 = pb2.PB2(
-    time_attr="time_total_s",
-    perturbation_interval=50000,
-    quantile_fraction=0.25,  # copy bottom % with top % (weights)
-    # Specifies the hyperparam search space
-    hyperparam_bounds=pb2_hyperparam_mutations
-    )
 
 
 def pick_config_env(str_env):
@@ -146,7 +106,9 @@ def rllib_loop(config, str_logger):
                 "num_envs_per_worker" : args.num_envs,
                 "num_gpus" : args.num_gpus, 
                 "num_gpus_per_worker" : args.gpus_worker, 
-                "num_cpus_per_worker": args.cpus_worker
+                "num_cpus_per_worker": args.cpus_worker,
+                "train_batch_size": args.buffer_size,
+                "sgd_minibatch_size": args.batch_size
                 }
         )
     
@@ -155,73 +117,69 @@ def rllib_loop(config, str_logger):
     
     print(config)
 
+    #copy the current codebase to the log directory
+    path = Path(args.log + "/" + str_logger)
+    path = Path(args.log + "/" + str_logger + "/beoenv")
+    path.mkdir(parents=True, exist_ok=True)
+    distutils.dir_util.copy_tree("/lab/kiran/beoenv/", args.log + "/" + str_logger + "/beoenv/")
 
-    """
+    ##Training starts
+    #if args.no_tune:
+    if "multiagent" in config:
+        algo = MultiPPO(config=config)
+        print("Using MultiPPO")
+    else:
+        algo = PPO(config=config)
+
+    plc = algo.get_policy()
+
     #Only train the backbone if backbone is e2e
     #get backbone and policy from setting.
     #you need to load the weights into the backbone or policy here!
-    if args.policy != None:
-        backbone_ckpt = Policy.from_checkpoint('/lab/kiran/ckpts/trained/' + args.backbone).get_weights()
-        for params in plc.keys():
-            #load the policy
-            if 'mlp' in params:
-                plc[i] = res_wts[i]
 
-    #load the backbone
-    if args.backbone != 'e2e':
-        policy_ckpt = Policy.from_checkpoint(policy).get_weights()
-        for params in plc.keys():
-            #load the backbone
-            if 'cnn' in params:
-                plc[i] = res_wts[i]
-    """
-
-    if args.setting == 'seqgame' and config['env'] != configs.all_envs[0]:
-        policy_ckpt = Policy.from_checkpoint(args.ckpt + "/" + args.prefix + "/checkpoint")
+    
+    if args.setting == 'seqgame' and config['env_config']['env'] != configs.all_envs[0]:
+        policy_ckpt = Policy.from_checkpoint(args.log + "/" + str_logger.replace(config['env_config']['env'] + '/', '') + "/checkpoint")
         plc.set_weights(policy_ckpt.get_weights())
 
-  
-    if args.no_tune:
-        if "multiagent" in config:
-            algo = MultiPPO(config=config)
-            print("Using MultiPPO")
-        else:
-            algo = PPO(config=config)
+    #if args.policy != None:
+    #    backbone_ckpt = Policy.from_checkpoint('/lab/kiran/ckpts/trained/' + args.backbone).get_weights()
+    #    for params in plc.keys():
+            #load the policy
+    #        if 'mlp' in params:
+    #            plc[i] = res_wts[i]
 
-        plc = algo.get_policy()
+    #load the backbone
+    if args.backbone != 'e2e' and 'e2e' in args.backbone:
+        embed()
+        load_ckpt = Policy.from_checkpoint(args.log + "/" + args.temporal + "/" + args.backbone + "/checkpoint").get_weights()
+        embed()
+        orig_wts = plc.get_weights()
+        chng_wts = {}
+        for params in load_ckpt.keys():
+            if 'logits' not in params and 'value' not in params:
+                print(params)
+                chng_wts[params] = load_ckpt[params]
+            else:
+                chng_wts[params] = orig_wts[params]
+        plc.set_weights(chng_wts)
 
-        # run manual training loop and print results after each iteration
-        for _ in range(args.stop_timesteps):
-            result = algo.train()
-            print(pretty_print(result))
-            
-            # stop training of the target train steps or reward are reached
-            #MAKE SURE YOU KEEP SAVING CHECKPOINTS
-            if result["timesteps_total"] >= args.stop_timesteps:
-                policy = algo.get_policy()
-                policy.export_checkpoint(args.ckpt + "/" + str_logger + "/checkpoint")
-                break
-        algo.stop()
 
-    """
-    else:
+    # run manual training loop and print results after each iteration
+    for _ in range(args.stop_timesteps):
+        result = algo.train()
+        print(pretty_print(result))
+        
+        # stop training of the target train steps or reward are reached
+        #MAKE SURE YOU KEEP SAVING CHECKPOINTS
+        if result["timesteps_total"] >= args.stop_timesteps:
+            algo.save(checkpoint_dir=args.log + "/" + str_logger.replace(config['env_config']['env'] + '/', '') + "/checkpoint/wholealgo")
+            policy = algo.get_policy()
+            policy.export_checkpoint(args.log + "/" + str_logger.replace(config['env_config']['env'] + '/', '') + "/checkpoint")
+            break
+    algo.stop()
 
-        tuner = tune.Tuner(
-        "PPO",
-        tune_config=tune.TuneConfig(
-            metric="episode_reward_mean",
-            mode="max",
-            scheduler=pbt,
-            num_samples=4,
-        ),
-        param_space=config,
-        run_config=air.RunConfig(stop={
-            "timesteps_total": args.stop_timesteps,
-            }),
-        )
-        results = tuner.fit()
 
-    """
 #ADD PREPROCESSOR TO STR_LOGGER
 #DO THE RANDOM TRIALS
 
@@ -237,7 +195,7 @@ def single_train(str_logger, backbone='e2e', policy=None):
     # modify atari_config to incorporate the environments
     #construct the environment from envs.py based on the env_name 
     use_config, use_env = pick_config_env('single')
-    env_config = {'env': args.set, 'framestack': args.temporal == '4stack'}
+    env_config = {'env': args.set, 'framestack': args.temporal == '4stack', 'full_action_space': False}
 
     if args.backbone == "e2e":
         args.train_backbone = True
@@ -276,28 +234,28 @@ def seq_train(str_logger):
     #construct the base env class from envs.py based on the env_name
     use_config, use_env = pick_config_env('single')
 
+    if args.backbone == "e2e":
+        args.train_backbone = True
+
     #register the model
     ModelCatalog.register_custom_model("model", SingleAtariModel)
     
     #In the forloop base config and spec stays the same
-    for eachenv in configs.all_envs: 
+    for eachenv in configs.all_envs:
         #in the for loop set the previous models weights
         #adapter, policy, backbone
         #env_config consists of which games we use
         use_config.update(
-            {"env" : eachenv, 
-             "env_config" : {"full_action_space":True},
-             "model": {"custom_model" : "model",
-                        "vf_share_layers": True
-             },
+            {"env" : use_env, 
+             "env_config" : {'env': eachenv, "full_action_space": False, 'framestack': args.temporal == '4stack'},
              "logger_config" : {
                 "type": UnifiedLogger,
-                "logdir": os.path.expanduser(args.log + '/' + str_logger)
+                "logdir": os.path.expanduser(args.log + '/' + str_logger + "/" + eachenv + "/")
                 }
             }
         )
 
-        rllib_loop(use_config)
+        rllib_loop(use_config, str_logger)
 
 
 
@@ -307,7 +265,7 @@ def train_multienv(str_logger):
     #get the base atari_config to incorporate the environments
     #construct the base env class from envs.py based on the env_name
     use_config, use_env = pick_config_env('multi')
-    env_config = {'envs': configs.all_envs}
+    env_config = {'envs': configs.all_envs, 'full_action_space': True, 'framestack': args.temporal == '4stack'}
 
     #construct the spec based on the environment/tasks
     #returns multipolicies and multimap
@@ -348,7 +306,6 @@ def train_multienv(str_logger):
     use_config.update(
             {
                     "env" : use_env,
-                    "preprocessor_pref": "rllib",
                     "env_config": env_config,
                     "logger_config" : {
                         "type": UnifiedLogger,

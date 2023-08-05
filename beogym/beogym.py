@@ -93,7 +93,7 @@ class BeoGym(gym.Env):
         self.agent.reset()
         
         self.minD=300
-        self.maxD=500
+        self.maxD=99999
         #short300-500
         while True:
             self.courier_goal = self.dh.sample_location()

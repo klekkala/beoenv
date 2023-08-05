@@ -26,8 +26,9 @@ def get_args():
     parser.add_argument(
         "--log", type=str, default="/lab/kiran/logs/rllib/atari", help="config file for resources"
     )
+
     parser.add_argument(
-        "--ckpt", type=str, default="/lab/kiran/ckpts/trained", help="directory for saving resources"
+        "--ckpt", type=str, default="/lab/kiran/ckpts/pretrained/", help="directory for saving resources"
     ) 
     parser.add_argument(
         "--env_name", type=str, default="atari", help="Environment name"

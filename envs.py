@@ -9,6 +9,7 @@ from ray import air, tune
 import numpy as np
 import cv2
 import random
+import string
 from ray.rllib.policy.sample_batch import SampleBatch
 from ray.rllib.env.wrappers.atari_wrappers import FrameStack, WarpFrame, NoopResetEnv, MonitorEnv, MaxAndSkipEnv, FireResetEnv
 import ray
@@ -72,11 +73,12 @@ class MultiCallbacks(DefaultCallbacks):
         for each_id in range(len(env_keys)):
             episode.custom_metrics[base_env.envs[0].envs[env_keys[each_id][0]]] = episode.agent_rewards[(env_keys[each_id][0], env_keys[each_id][1])]
 
+from PIL import Image
 
 class SingleAtariEnv(gym.Env):
     def __init__(self, env_config):
         #if env_config['framestack']:
-        self.env = wrap_custom(gym.make(env_config['env'], full_action_space=True), framestack=env_config['framestack'])
+        self.env = wrap_custom(gym.make(env_config['env'], full_action_space=env_config['full_action_space']), framestack=env_config['framestack'])
 
         self.action_space = self.env.action_space
         self.observation_space = self.env.observation_space
@@ -86,6 +88,17 @@ class SingleAtariEnv(gym.Env):
 
     def step(self, action):
         return self.env.step(action)
+
+    """
+    def step(self, action):
+        res = ''.join(random.choices(string.ascii_lowercase +
+                             string.digits, k=7))
+        ab = self.env.step(action)
+        obs = ab[0][:,:,0]
+        im = Image.fromarray(obs)
+        im.save("/lab/kiran/beamrider_rllib_imgs/" + res + ".png")
+        return ab
+    """
 
 
 

@@ -11,7 +11,7 @@ resource_file = '/lab/kiran/hostconf/'
 
 #pathnames for all the saved .pth backbonemodels
 #IMPLEMENT VAE FOR BEOGYM
-map_models =  {"1chanvae": "/lab/kiran/ckpts/pretrained/atari/GREY_ATARI_BEAMRIDER_0.0_64.pt", "4stackvae": "/lab/kiran/ckpts/pretrained/atari/4STACK_ATARI_BEAMRIDER_0.0_64.pt", "random": None, "e2e": None}
+#map_models =  {"1chanvae": "/lab/kiran/ckpts/pretrained/atari/GREY_ATARI_ALL_0.0_128.pt", "4stackvae": "/lab/kiran/ckpts/pretrained/atari/4STACK_ATARI_BEAMRIDER_0.0_128.pt", "random": None, "e2e": None}
 
 #add the model to a mapfile dictionary
 
@@ -25,7 +25,7 @@ if args.env_name == "atari":
         all_envs = ["AssaultNoFrameskip-v4", "BeamRiderNoFrameskip-v4", "RiverraidNoFrameskip-v4", "PhoenixNoFrameskip-v4"]
 
 elif args.env_name == "beogym":
-    all_envs = ['Wall_Street', 'Union_Square', 'Hudson_River']
+    all_envs = ['Wall_Street', 'Union_Square', 'Hudson_River', 'CMU', 'Allegheny', 'South_Shore']
     #train_beogym_envs = []
     #test_beogym_envs = []
 
@@ -54,7 +54,7 @@ atari_config = {
         "vf_share_layers": True,
         "conv_filters": [[16, [8, 8], 4], [32, [4, 4], 2], [512, [11, 11], 1],],
         "conv_activation" : "relu" if (args.temporal == '4stack' or args.temporal == 'notemp') else "elu",
-        "custom_model_config" : {"backbone": args.backbone, "backbone_path": map_models[args.backbone], "train_backbone": args.train_backbone, 'temporal': args.temporal},
+        "custom_model_config" : {"backbone": args.backbone, "backbone_path": args.ckpt + args.env_name + "/" + args.backbone, "train_backbone": args.train_backbone, 'temporal': args.temporal},
         "framestack": args.temporal == '4stack',
         "use_lstm": args.temporal == 'lstm',
         "use_attention": args.temporal == 'attention',
