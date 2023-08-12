@@ -64,7 +64,7 @@ if __name__ == "__main__":
         if args.setting == 'singlegame':
             #get the list of train or test environments from args.trainset
             if args.env_name == 'beogym':
-                train.beogym_single_train(str_logger)
+                train.beogym_single_train(str_logger,args.backbone)
             else:
                 train.single_train(str_logger)
 

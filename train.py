@@ -32,6 +32,7 @@ from ray.rllib.evaluation import Episode, RolloutWorker
 from ray.rllib.algorithms.algorithm_config import AlgorithmConfig
 from models.atarimodels import SingleAtariModel, SharedBackboneAtariModel, SharedBackbonePolicyAtariModel
 # from models.beogymmodels import SingleBeogymModel, SharedBackboneBeogymModel, SharedBackbonePolicyBeogymModel
+from models.beogymmodels import LSTM2Network
 from ray.rllib.algorithms.ppo import PPOConfig
 from typing import Dict, Tuple
 import gym
@@ -230,6 +231,7 @@ def single_train(str_logger, backbone='e2e', policy=None):
 #this function reuses the train_singleenv function
 def seq_train(str_logger):
 
+    print("SEQUENTIAL MODE!")
     #get the base atari_config to incorporate the environments
     #construct the base env class from envs.py based on the env_name
     use_config, use_env = pick_config_env('single')
@@ -354,6 +356,20 @@ def beogym_single_train(str_logger, backbone='e2e', policy=None):
                     # "model": {"custom_mod52el" : "model",
                     #           "vf_share_layers": True
                     # },
+                }
+            )
+
+    if backbone == '2lstm':
+        ModelCatalog.register_custom_model(
+            "my_model", LSTM2Network
+        )
+        use_config.update(
+                {
+                    "model": {"custom_model": "my_model",
+                              "vf_share_layers": True,
+                              "conv_filters": [[16, 3, 2], [32, 3, 2], [64, 3, 2], [128, 3, 2], [256, 3, 2]]
+
+                    },
                 }
             )
 

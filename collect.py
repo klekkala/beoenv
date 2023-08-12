@@ -3,13 +3,8 @@ import numpy as np
 from ray.rllib.policy.policy import Policy
 from ray.rllib.algorithms.algorithm import Algorithm
 import cv2 
-#from envs import SingleAtariEnv
-#from arguments import get_args
-#from IPython import embed
-from arguments import get_args
 import ray
-import configs
-#import graph_tool.all as gt
+#import configs
 from ray.rllib.utils.annotations import override
 from ray import air, tune
 from ray.rllib.algorithms.ppo import PPO
@@ -31,39 +26,51 @@ from ray.rllib.algorithms.algorithm_config import AlgorithmConfig
 from models.atarimodels import SingleAtariModel, SharedBackboneAtariModel, SharedBackbonePolicyAtariModel
 # from models.beogymmodels import SingleBeogymModel, SharedBackboneBeogymModel, SharedBackbonePolicyBeogymModel
 from ray.rllib.algorithms.ppo import PPOConfig
-from configs import atari_config
 from typing import Dict, Tuple
 import gym
 import distutils.dir_util
 from gym import spaces
 from ray.rllib.policy.sample_batch import SampleBatch
-import specs
 from IPython import embed
 import shutil
 import distutils.dir_util
 from pathlib import Path
 from envs import SingleAtariEnv
 import pickle
+import argparse
+
+dparser = argparse.ArgumentParser()
+
+
+dparser.add_argument(
+    "--stop_timesteps", type=int, default=1000000, help="Number of timesteps to train."
+)
+dparser.add_argument(
+    "--dpath", type=str, default="/lab/tmpig14c/kiran/trained_4stack_", help="Number of timesteps to train."
+)
+dparser.add_argument(
+    "--game", type=str, default="", help="machine to be training"
+)
+
+args = dparser.parse_args()
+
 
 ModelCatalog.register_custom_model("model", SingleAtariModel)
 
 
+choices = {
+    'CarnivalNoFrameskip-v4': ('carnival', '/lab/kiran/logs/rllib/atari/4stack/1.a_CarnivalNoFrameskip-v4_singlegame_full_4STACK_CONT_ATARI_EXPERT_4STACK_TRAIN_RESNET_0.1_0.01_512_512.pt_PolicyNotLoaded_0.0_20000_2000_4stack/23_08_07_18_30_07/checkpoint/'),
+    'DemonAttackNoFrameskip-v4': ('demonattack', '/lab/kiran/logs/rllib/atari/4stack/1.a_DemonAttackNoFrameskip-v4_singlegame_full_4STACK_CONT_ATARI_EXPERT_4STACK_TRAIN_RESNET_0.1_0.01_512_512.pt_PolicyNotLoaded_0.0_20000_2000_4stack/23_08_06_09_12_11/checkpoint/'),
+    'AirRaidNoFrameskip-v4': ('airraid', '/lab/kiran/logs/rllib/atari/4stack/1.a_AirRaidNoFrameskip-v4_singlegame_full_4STACK_CONT_ATARI_EXPERT_4STACK_TRAIN_RESNET_0.1_0.01_512_512.pt_PolicyNotLoaded_0.0_20000_2000_4stack/23_08_06_01_30_05/checkpoint/'),
+    'NameThisGameNoFrameskip-v4': ('namethisgame', '/lab/kiran/logs/rllib/atari/4stack/1.a_NameThisGameNoFrameskip-v4_singlegame_full_4STACK_CONT_ATARI_EXPERT_4STACK_TRAIN_RESNET_0.1_0.01_512_512.pt_PolicyNotLoaded_0.0_20000_2000_4stack/23_08_06_09_14_07/checkpoint/'),
+    'SpaceInvadersNoFrameskip-v4': ('spaceinvaders', '/lab/kiran/logs/rllib/atari/4stack/1.a_SpaceInvadersNoFrameskip-v4_singlegame_full_4STACK_CONT_ATARI_EXPERT_4STACK_TRAIN_RESNET_0.1_0.01_512_512.pt_PolicyNotLoaded_0.0_20000_2000_4stack/23_08_06_09_16_00/checkpoint/')
+}
+
+encodernet = Policy.from_checkpoint(choices[args.game][1])
 
 
-encodernet = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/4stack/1.a_CarnivalNoFrameskip-v4_singlegame_full_4STACK_CONT_ATARI_EXPERT_4STACK_TRAIN_STANDARD_0.1_0.01_512_512.pt_PolicyNotLoaded_0.0_20000_2000_4stack/23_07_29_14_52_59/checkpoint/')
-#encodernet = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/4stack/1.a_DemonAttackNoFrameskip-v4_singlegame_full_4STACK_CONT_ATARI_EXPERT_4STACK_TRAIN_STANDARD_0.1_0.01_512_512.pt_PolicyNotLoaded_0.0_20000_2000_4stack/23_07_29_14_52_29/checkpoint/')
 
-
-
-
-
-args = get_args()
-print(args.log + "/" + args.temporal + "/" + args.backbone + "/checkpoint/")
-#my_restored_policy = Policy.from_checkpoint(args.log + "/" + args.temporal + "/" + args.backbone + "/checkpoint/")
-
-res=[]
-
-env = SingleAtariEnv({'env': args.set, 'full_action_space': False, 'framestack': args.temporal == '4stack'})
+env = SingleAtariEnv({'env': args.game, 'full_action_space': False, 'framestack': '4stack' in choices[args.game][1]})
 
 obs_np = []
 act_np = []
@@ -91,21 +98,16 @@ while True:
             break
     print(total)
 
-    if len(act_np) > 1000000:
+    if len(act_np) > args.stop_timesteps:
         break
 
 
 
-#np.save('/lab/tmpig14c/kiran/trained_4stack_demonattack/observation', np.array(obs_np))
-#np.save('/lab/tmpig14c/kiran/trained_4stack_demonattack/action', np.array(act_np))
-#np.save('/lab/tmpig14c/kiran/trained_4stack_demonattack/reward', np.array(rew_np))
-#np.save('/lab/tmpig14c/kiran/trained_4stack_demonattack/terminal', np.array(done_np))
 
-
-np.save('/lab/tmpig14c/kiran/trained_4stack_carnival/observation', np.array(obs_np))
-np.save('/lab/tmpig14c/kiran/trained_4stack_carnival/action', np.array(act_np))
-np.save('/lab/tmpig14c/kiran/trained_4stack_carnival/reward', np.array(rew_np))
-np.save('/lab/tmpig14c/kiran/trained_4stack_carnival/terminal', np.array(done_np))
+np.save(args.dpath + choices[args.game][0] + '/observation', np.array(obs_np))
+np.save(args.dpath + choices[args.game][0] + '/action', np.array(act_np))
+np.save(args.dpath + choices[args.game][0] + '/reward', np.array(rew_np))
+np.save(args.dpath + choices[args.game][0] + '/terminal', np.array(done_np))
 
 
 obs = np.array(obs_np)
@@ -114,8 +116,7 @@ act = np.array(act_np)
 ter = np.array(done_np)
 
 ter[-1]=1
-np.save('/lab/tmpig14c/kiran/trained_4stack_carnival/terminal', ter)
-#np.save('/lab/tmpig14c/kiran/trained_4stack_demonattack/terminal', ter)
+np.save(args.dpath + choices[args.game][0] + '/terminal', ter)
 indices = np.where(ter == 1)
 
 
@@ -164,10 +165,6 @@ np_limit = np.stack(slice_limit)
 
 #originally it was episode... instead of limit
 #data1 = np.concatenate(all_val[0], axis=0)
-np.save('/lab/tmpig14c/kiran/trained_4stack_carnival/' + 'limit', np_limit)
-np.save('/lab/tmpig14c/kiran/trained_4stack_carnival/' + 'episode', np_epi)
-np.save('/lab/tmpig14c/kiran/trained_4stack_carnival/' + 'id_dict', id_dict)
-
-#np.save('/lab/tmpig14c/kiran/trained_4stack_demonattack/' + 'limit', np_limit)
-#np.save('/lab/tmpig14c/kiran/trained_4stack_demonattack/' + 'episode', np_epi)
-#np.save('/lab/tmpig14c/kiran/trained_4stack_demonattack/' + 'id_dict', id_dict)
+np.save(args.dpath + choices[args.game][0] + '/limit', np_limit)
+np.save(args.dpath + choices[args.game][0] + '/episode', np_epi)
+np.save(args.dpath + choices[args.game][0] + '/id_dict', id_dict)

@@ -61,9 +61,9 @@ class SingleAtariModel(VisionNetwork):
     ):
         super().__init__(observation_space, action_space, num_outputs, model_config, name)
         if "RESNET" in model_config['custom_model_config']['backbone'] and "DUAL" in model_config['custom_model_config']['backbone']:            
-            self._convs = ResEncoder(channel_in=4, ch=64, z=512)
+            self._convs = TEncoder(channel_in=4, ch=64, z=512)
         elif "RESNET" in model_config['custom_model_config']['backbone']:
-            self._convs = TResEncoder(channel_in=4, ch=64, z=512)
+            self._convs = TEncoder(channel_in=4, ch=64, z=512)
         elif 'DUAL' in model_config['custom_model_config']['backbone']:
             self._convs = Encoder(channel_in=4, ch=32, z=512)
         elif '4STACK_CONT' in model_config['custom_model_config']['backbone']:
