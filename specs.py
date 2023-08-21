@@ -37,7 +37,7 @@ def gen_policy(i):
             "vf_share_layers": True,
             "conv_filters": [[16, [8, 8], 4], [32, [4, 4], 2], [512, [11, 11], 1],],
             "conv_activation" : "relu" if args.temporal == '4stack' else "elu",
-            "custom_model_config" : {"backbone": args.backbone, "backbone_path": configs.map_models[args.backbone], "train_backbone": args.train_backbone},
+            "custom_model_config" : {"backbone": args.backbone, "backbone_path": args.ckpt + args.env_name + "/" + args.backbone, "train_backbone": args.train_backbone},
             "framestack": args.temporal == '4stack',
             "use_lstm": args.temporal == 'lstm',
             "use_attention": args.temporal == 'attention',    

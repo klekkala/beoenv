@@ -14,7 +14,9 @@ from ray.rllib.models.torch.model import TorchModel
 from ray.rllib.models.base_model import RecurrentModel, Model, ModelIO
 from ray.rllib.models.modelv2 import ModelV2
 from ray.rllib.models.torch.misc import SlimFC
-
+from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
+from ray.rllib.utils.typing import ModelConfigDict, TensorType
+from typing import Dict, List
 from ray.rllib.models.utils import get_activation_fn
 from ray.rllib.policy.sample_batch import SampleBatch
 from ray.rllib.utils.annotations import override
@@ -34,6 +36,7 @@ from ray.rllib.models.torch.misc import (
     SlimFC,
 )
 
+from ray.rllib.models.torch.recurrent_net import RecurrentNetwork as TorchRNN
 torch, nn = try_import_torch()
 
 
@@ -106,7 +109,6 @@ class SingleAtariModel(VisionNetwork):
             #for param in self._convs.conv_mu.parameters():
             #    param.requires_grad = True
 
-        #embed()
         #self.trainable_variables(True)
 
 #this is class is reused for every game/city/town
@@ -133,5 +135,121 @@ class SharedBackbonePolicyAtariModel(SingleAtariModel):
 
 
 
+class TorchCNNV2PlusRNNModel(TorchRNN, nn.Module):
+    """A conv. + recurrent torch net example using a pre-trained MobileNet."""
 
+    def __init__(
+        self, obs_space, action_space, num_outputs, model_config, name
+    ):
 
+        TorchRNN.__init__(
+            self, obs_space, action_space, num_outputs, model_config, name
+        )
+        nn.Module.__init__(self)
+
+        self.lstm_state_size = 512 #originally 16
+        self.cnn_shape = [1, 84, 84]
+        self.visual_size_in = self.cnn_shape[0] * self.cnn_shape[1] * self.cnn_shape[2]
+        # MobileNetV2 has a flat output of (1000,).
+        self.visual_size_out = 512
+
+        # Load the MobileNetV2 from torch.hub.
+        if "RESNET" in model_config['custom_model_config']['backbone'] and "DUAL" in model_config['custom_model_config']['backbone']:            
+            self._convs = Encoder(channel_in=1, ch=64, z=512)
+        elif "RESNET" in model_config['custom_model_config']['backbone']:
+            self._convs = TEncoder(channel_in=1, ch=64, z=512)
+        elif 'DUAL' in model_config['custom_model_config']['backbone']:
+            self._convs = Encoder(channel_in=1, ch=32, z=512)
+        else:
+            #self._convs = TEncoder(channel_in=1, ch=32, z=512)
+            self._convs = TEncoder(channel_in=1, ch=32, z=512, activation="elu")
+        
+        print(self._convs)
+        self.lstm = nn.LSTM(
+            self.visual_size_out, self.lstm_state_size, batch_first=True
+        )
+
+        # Postprocess LSTM output with another hidden layer and compute values.
+        self.logits = SlimFC(self.lstm_state_size, self.num_outputs)
+        self.value_branch = SlimFC(self.lstm_state_size, 1)
+        # Holds the current "base" output (before logits layer).
+        self._features = None
+
+        if "e2e" not in model_config['custom_model_config']['backbone_path'] and "random" not in model_config['custom_model_config']['backbone_path']:
+            print(model_config['custom_model_config']['backbone_path'])
+            print("loading model weights")
+            checkpoint = torch.load(model_config['custom_model_config']['backbone_path'], map_location="cpu")
+            
+            lstm_ckpt = {}
+            convs_ckpt = {}
+            for eachkey in checkpoint['model_state_dict']:
+                if 'lstm' in eachkey:
+                    newkey = eachkey.replace('lstm.', '')
+                    lstm_ckpt[newkey] = checkpoint['model_state_dict'][eachkey]
+                else:
+                    if 'conv_mu' in eachkey:
+                        newkey = eachkey.replace('encoder.', '')
+                    else:
+                        newkey = eachkey.replace('encoder.encoder', 'encoder')
+                    convs_ckpt[newkey] = checkpoint['model_state_dict'][eachkey]
+            
+            #for each in self._convs.named_parameters():
+            #    print(each[0])
+
+            #create cnn_modstdict
+            self._convs.load_state_dict(convs_ckpt)
+        
+            #create lstm_modstdict
+            self.lstm.load_state_dict(lstm_ckpt)
+            
+        if not model_config['custom_model_config']['train_backbone']:
+            print("freezing encoder layers")
+            #freeze the entire backbone
+            self._convs.eval()
+            for param in self._convs.parameters():
+                param.requires_grad = False
+
+            self.lstm.eval()
+            for param in self.lstm.parameters():
+                param.requires_grad = False
+
+        
+    @override(TorchRNN)
+    def forward_rnn(self, inputs, state, seq_lens):
+        # Create image dims.
+        vision_in = torch.reshape(inputs, [-1] + self.cnn_shape)
+        vision_out = torch.flatten(self._convs(vision_in), start_dim=1)
+        # Flatten.
+
+        vision_out_time_ranked = torch.reshape(
+            vision_out, [inputs.shape[0], inputs.shape[1], vision_out.shape[-1]]
+        )
+        if len(state[0].shape) == 2:
+            state[0] = state[0].unsqueeze(0)
+            state[1] = state[1].unsqueeze(0)
+        # Forward through LSTM.
+        self._features, [h, c] = self.lstm(vision_out_time_ranked, state)
+        # Forward LSTM out through logits layer and value layer.
+        logits = self.logits(self._features)
+        return logits, [h.squeeze(0), c.squeeze(0)]
+
+    @override(ModelV2)
+    def get_initial_state(self):
+        # Place hidden states on same device as model.
+        h = [
+            list(self._convs.modules())[-1]
+            .weight.new(1, self.lstm_state_size)
+            .zero_()
+            .squeeze(0),
+            list(self._convs.modules())[-1]
+            .weight.new(1, self.lstm_state_size)
+            .zero_()
+            .squeeze(0),
+        ]
+        return h
+
+    @override(ModelV2)
+    def value_function(self):
+        assert self._features is not None, "must call forward() first"
+        return torch.reshape(self.value_branch(self._features), [-1])
+    

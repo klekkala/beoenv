@@ -46,7 +46,8 @@ def wrap_custom(env, dim=84, framestack=True):
     # env = ClipRewardEnv(env)  # reward clipping is handled by policy eval
     # 4x image framestacking.
     if framestack is True:
-        env = FrameStack(env, 4)
+        #env = FrameStack(env, 4)
+        env = FrameStack(env, 1)
     return env
 
 

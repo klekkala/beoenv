@@ -119,17 +119,22 @@ class VAE(nn.Module):
 
 
 class TEncoder(nn.Module):
-    def __init__(self, channel_in=3, ch=16, z=64, h_dim=512):
+    def __init__(self, channel_in=3, ch=16, z=64, h_dim=512, activation="relu"):
         super(TEncoder, self).__init__()
+        if activation == "relu":
+            conv_activation = nn.ReLU()
+        else:
+            conv_activation = nn.ELU()
+
         self.encoder = nn.Sequential(
             nn.ZeroPad2d((2, 2, 2, 2)),
             nn.Conv2d(channel_in, ch, kernel_size=(8, 8), stride=(4, 4)),
-            nn.ReLU(),
+            conv_activation,
             nn.ZeroPad2d((1, 2, 1, 2)),
             nn.Conv2d(ch, ch*2, kernel_size=(4, 4), stride=(2, 2)),
-            nn.ReLU(),
+            conv_activation,
             nn.Conv2d(ch*2, ch*32, kernel_size=(11, 11), stride=(1, 1)),
-            nn.ReLU(),
+            conv_activation,
         )
 
         self.conv_mu = nn.Conv2d(ch*32, z, 1, 1)

@@ -32,7 +32,7 @@ from ray.rllib.evaluation import Episode, RolloutWorker
 from ray.rllib.algorithms.algorithm_config import AlgorithmConfig
 from models.atarimodels import SingleAtariModel, SharedBackboneAtariModel, SharedBackbonePolicyAtariModel
 # from models.beogymmodels import SingleBeogymModel, SharedBackboneBeogymModel, SharedBackbonePolicyBeogymModel
-from models.beogymmodels import LSTM2Network
+from models.atarimodels import TorchCNNV2PlusRNNModel
 from ray.rllib.algorithms.ppo import PPOConfig
 from typing import Dict, Tuple
 import gym
@@ -90,7 +90,7 @@ def rllib_loop(config, str_logger):
     #final modifications in the config
     if args.temporal == "lstm" or args.temporal == "attention":
         args.stop_timesteps = 75000000
-    
+
     print("program running for, ", args.stop_timesteps)
     #load the config
     #extract data from the config file
@@ -202,7 +202,9 @@ def single_train(str_logger, backbone='e2e', policy=None):
         args.train_backbone = True
 
     if args.env_name == 'atari':
-        ModelCatalog.register_custom_model("model", SingleAtariModel)
+        #ModelCatalog.register_custom_model("model", SingleAtariModel)
+        ModelCatalog.register_custom_model("model", TorchCNNV2PlusRNNModel)
+
 
     elif args.env_name == 'beogym':
         ModelCatalog.register_custom_model("model", SingleBeogymModel)
@@ -219,8 +221,6 @@ def single_train(str_logger, backbone='e2e', policy=None):
                 }
             )
  
-
-
 
     #start the training loop
     rllib_loop(use_config, str_logger)
@@ -274,6 +274,8 @@ def train_multienv(str_logger):
     #multistuff = specs.generate_specs()
 
     #register the model
+
+
     if args.shared == "full":
         mods = [SingleAtariModel]*len(configs.all_envs)
         ModelCatalog.register_custom_model("model", SingleAtariModel)

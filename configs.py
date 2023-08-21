@@ -21,8 +21,17 @@ if args.env_name == "atari":
         #all_envs = ["BeamRiderNoFrameskip-v4", "AssaultNoFrameskip-v4"]
     elif args.set == "train": 
         all_envs = ["AirRaidNoFrameskip-v4", "CarnivalNoFrameskip-v4", "DemonAttackNoFrameskip-v4", "NameThisGameNoFrameskip-v4" ,"SpaceInvadersNoFrameskip-v4"]
-    else:
+    elif args.set == "test":
         all_envs = ["AssaultNoFrameskip-v4", "BeamRiderNoFrameskip-v4", "RiverraidNoFrameskip-v4", "PhoenixNoFrameskip-v4"]
+    elif args.set == "one":
+        all_envs = ["AirRaidNoFrameskip-v4"]
+    elif args.set == "two":
+        all_envs = ["AirRaidNoFrameskip-v4", "CarnivalNoFrameskip-v4"]
+    elif args.set == "three":
+        all_envs = ["AirRaidNoFrameskip-v4", "CarnivalNoFrameskip-v4", "DemonAttackNoFrameskip-v4"]
+    elif args.set == "four":
+        all_envs = ["AirRaidNoFrameskip-v4", "CarnivalNoFrameskip-v4", "DemonAttackNoFrameskip-v4", "NameThisGameNoFrameskip-v4"]
+
 
 elif args.env_name == "beogym":
     all_envs = ['Wall_Street', 'Union_Square', 'Hudson_River', 'CMU', 'Allegheny', 'South_Shore']

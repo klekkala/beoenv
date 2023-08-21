@@ -50,7 +50,19 @@ ModelCatalog.register_custom_model("model", SingleAtariModel)
 
 
 
-encodernet = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/4stack/1.a_DemonAttackNoFrameskip-v4_singlegame_full_4STACK_CONT_ATARI_EXPERT_4STACK_DEMONATTACK_STANDARD_0.1_0.01_512_512.pt_PolicyNotLoaded_0.0_20000_2000_4stack/23_07_27_15_53_30/checkpoint/')
+#encodernet = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/4stack/1.a_DemonAttackNoFrameskip-v4_singlegame_full_4STACK_CONT_ATARI_EXPERT_4STACK_DEMONATTACK_STANDARD_0.1_0.01_512_512.pt_PolicyNotLoaded_0.0_20000_2000_4stack/23_07_27_15_53_30/checkpoint/')
+
+embed()
+
+objects = []
+with (open('/lab/kiran/logs/rllib/atari/lstm/1.a_DemonAttackNoFrameskip-v4_singlegame_full_e2e_PolicyNotLoaded_0.0_20000_2000_lstm/23_08_16_00_21_36/checkpoint/policy_state.pkl', "rb")) as openfile:
+    while True:
+        try:
+            objects.append(pickle.load(openfile))
+        except EOFError:
+            break
+
+#encodernet = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/lstm/1.a_DemonAttackNoFrameskip-v4_singlegame_full_e2e_PolicyNotLoaded_0.0_20000_2000_lstm/23_08_16_00_21_36/checkpoint/')
 
 
 args = get_args()
