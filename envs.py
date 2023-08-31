@@ -46,7 +46,8 @@ def wrap_custom(env, dim=84, framestack=True):
     # env = ClipRewardEnv(env)  # reward clipping is handled by policy eval
     # 4x image framestacking.
     if framestack is True:
-        #env = FrameStack(env, 4)
+        env = FrameStack(env, 4)
+    else:
         env = FrameStack(env, 1)
     return env
 
@@ -160,47 +161,14 @@ class SingleBeoEnv(gym.Env):
         return self.env.step(action)
 
 
-class ParellelBeoEnv(gym.Env): 
-    def __init__(self, envs):
-        for i in range(len(envs)):    
-            if env_config.worker_index%len(envs)==i:
-                self.env = BeoGym({'city':[envs[i]]})
-                self.name= envs[i]
-        #self.env = wrap_deepmind(self.env)
-        self.action_space = self.env.action_space
-        self.observation_space = self.env.observation_space
-        #if self.observation_space.shape[0]==214:
-            #self.observation_space = gym.spaces.Box(0, 255, (210, 160, 3), np.uint8)
-
-    def reset(self):
-        return self.env.reset()
-        temp = self.env.reset()
-        if isinstance(temp, np.ndarray):
-            return cv2.resize(temp, (84, 84))
-        #if str(type(temp))!='tuple':
-            #return cv2.resize(temp, (84, 84))
-        temp=list(temp)
-        temp[0] = cv2.resize(temp[0], (84, 84))
-        #res = tuple((cv2.resize(temp[0], (84, 84)),temp[1]))
-        return tuple(temp)
-    
-    def step(self, action):
-        return self.env.step(action)
-        temp = self.env.step(action)
-        if isinstance(temp, np.ndarray):
-            return cv2.resize(temp, (84, 84))
-        temp=list(temp)
-        temp[0] = cv2.resize(temp[0], (84, 84))
-        #res = tuple((cv2.resize(temp[0], (84, 84)),temp[1],temp[2],temp[3],temp[4]))
-        return tuple(temp)
-
 class MultiBeoEnv(MultiAgentEnv):
 
     def __init__(self, envs):
         self.agents=[]
         self.envs = envs
         for i in range(len(self.envs)):
-            self.agents.append(BeoGym({'city':[self.envs[i]]}))
+            print(self.envs)
+            self.agents.append(SingleBeoEnv({'city':[self.envs[i]], 'data_path':env_config['data_path']}))
         self.done = set()
         self.action_space = gym.spaces.Discrete(5)
         self.observation_space = self.agents[0].observation_space
@@ -230,11 +198,10 @@ class MultiBeoEnv(MultiAgentEnv):
 
         done["__all__"] = len(self.done) == len(self.agents)
         return obs, rew, done, info
-#class ParellelBeoEnv(gym.Env)
-#class MultiBeoEnv(MultiAgentEnv)
 
 
-beogym = {'single': SingleBeoEnv, 'parellel': ParellelBeoEnv, 'multi': MultiBeoEnv}
+
+beogym = {'single': SingleBeoEnv, 'multi': MultiBeoEnv}
 
 
 

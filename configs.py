@@ -34,9 +34,22 @@ if args.env_name == "atari":
 
 
 elif args.env_name == "beogym":
-    all_envs = ['Wall_Street', 'Union_Square', 'Hudson_River', 'CMU', 'Allegheny', 'South_Shore']
-    #train_beogym_envs = []
-    #test_beogym_envs = []
+    print("lksjfdlkskjfkalsj;fdjkfalsjfdkljfl")
+    if args.set == "all":
+        all_envs = ['Wall_Street', 'Union_Square', 'Hudson_River', 'CMU', 'Allegheny', 'South_Shore']
+    elif args.set == "train": 
+        all_envs = ['Wall_Street', 'Union_Square', 'Hudson_River', 'CMU', 'Allegheny']
+    elif args.set == "test":
+        all_envs = ['South_Shore']
+    elif args.set == "one":
+        all_envs = ['Wall_Street']
+    elif args.set == "two":
+        all_envs = ['Wall_Street', 'Union_Square']
+    elif args.set == "three":
+        all_envs = ['Wall_Street', 'Union_Square', 'Hudson_River']
+    elif args.set == "four":
+        all_envs = ['Wall_Street', 'Union_Square', 'Hudson_River', 'CMU']
+
 
 
 #atari env -> multiple games

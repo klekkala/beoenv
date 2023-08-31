@@ -42,7 +42,7 @@ torch, nn = try_import_torch()
 
 # The global, shared layer to be used by both models.
 # this model outputs a 512 latent dimension
-#ATARI_GLOBAL_SHARED_BACKBONE= StackEncoder
+ATARI_GLOBAL_SHARED_BACKBONE = TEncoder(channel_in=4, ch=32, z=512)
 
 
 #if using lstm this could be used:
@@ -53,9 +53,10 @@ ATARI_GLOBAL_SHARED_4STACK_VAE = VAE(channel_in=1, z=512)
 
 ATARI_GLOBAL_SHARED_POLICY = nn.Sequential(
     nn.ZeroPad2d((0, 0, 0, 0)),
-    nn.Conv2d(512, 18, kernel_size=(1, 1), stride=(1, 1))
+    nn.Conv2d(512, 6, kernel_size=(1, 1), stride=(1, 1))
     )
 
+ATARI_GLOBAL_SHARED_VF = nn.Linear(512, 1, bias=True)
 
 class SingleAtariModel(VisionNetwork):
 
@@ -130,12 +131,12 @@ class SharedBackbonePolicyAtariModel(SingleAtariModel):
         self, observation_space, action_space, num_outputs, model_config, name
     ):
         super().__init__(observation_space, action_space, num_outputs, model_config, name)
-        self._convs = ATARI_GLOBAL_SHARED_BACKBONE
+        
         self._logits = ATARI_GLOBAL_SHARED_POLICY
+        self._value_branch = ATARI_GLOBAL_SHARED_VF
 
 
-
-class TorchCNNV2PlusRNNModel(TorchRNN, nn.Module):
+class AtariCNNV2PlusRNNModel(TorchRNN, nn.Module):
     """A conv. + recurrent torch net example using a pre-trained MobileNet."""
 
     def __init__(
@@ -224,6 +225,7 @@ class TorchCNNV2PlusRNNModel(TorchRNN, nn.Module):
         vision_out_time_ranked = torch.reshape(
             vision_out, [inputs.shape[0], inputs.shape[1], vision_out.shape[-1]]
         )
+
         if len(state[0].shape) == 2:
             state[0] = state[0].unsqueeze(0)
             state[1] = state[1].unsqueeze(0)

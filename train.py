@@ -30,9 +30,8 @@ from ray.rllib.policy.policy_template import build_policy_class
 from ray.rllib.policy.sample_batch import SampleBatch
 from ray.rllib.evaluation import Episode, RolloutWorker
 from ray.rllib.algorithms.algorithm_config import AlgorithmConfig
-from models.atarimodels import SingleAtariModel, SharedBackboneAtariModel, SharedBackbonePolicyAtariModel
-# from models.beogymmodels import SingleBeogymModel, SharedBackboneBeogymModel, SharedBackbonePolicyBeogymModel
-from models.atarimodels import TorchCNNV2PlusRNNModel
+from models.atarimodels import SingleAtariModel, SharedBackboneAtariModel, SharedBackbonePolicyAtariModel, AtariCNNV2PlusRNNModel
+from models.beogymmodels import SingleBeogymModel, BeogymCNNV2PlusRNNModel
 from ray.rllib.algorithms.ppo import PPOConfig
 from typing import Dict, Tuple
 import gym
@@ -88,7 +87,7 @@ def pick_config_env(str_env):
 def rllib_loop(config, str_logger):
 
     #final modifications in the config
-    if args.temporal == "lstm" or args.temporal == "attention":
+    if args.temporal == "lstm" or args.temporal == "attention" or args.env_name == "beogym":
         args.stop_timesteps = 75000000
 
     print("program running for, ", args.stop_timesteps)
@@ -178,6 +177,7 @@ def rllib_loop(config, str_logger):
             policy = algo.get_policy()
             policy.export_checkpoint(args.log + "/" + str_logger.replace(config['env_config']['env'] + '/', '') + "/checkpoint")
             break
+    
     algo.stop()
 
 
@@ -201,13 +201,12 @@ def single_train(str_logger, backbone='e2e', policy=None):
     if args.backbone == "e2e":
         args.train_backbone = True
 
-    if args.env_name == 'atari':
-        #ModelCatalog.register_custom_model("model", SingleAtariModel)
-        ModelCatalog.register_custom_model("model", TorchCNNV2PlusRNNModel)
 
-
-    elif args.env_name == 'beogym':
-        ModelCatalog.register_custom_model("model", SingleBeogymModel)
+    if "1CHANLSTM" in args.backbone:
+        ModelCatalog.register_custom_model("model", AtariCNNV2PlusRNNModel)
+        env_config['framestack'] = False
+    else:
+        ModelCatalog.register_custom_model("model", SingleAtariModel)
 
     #do all the config overwrites here
     use_config.update(
@@ -220,13 +219,79 @@ def single_train(str_logger, backbone='e2e', policy=None):
                     }
                 }
             )
- 
+
 
     #start the training loop
     rllib_loop(use_config, str_logger)
 
-#SAVE CHECKPOINTS FOR 1.A PROPERLY!!!
 
+
+def beogym_single_train(str_logger, backbone='e2e', policy=None):
+
+    use_config, use_env = pick_config_env('single')
+    env_config = {'env': args.set,'data_path': args.data_path}
+
+    if args.backbone == "e2e":
+        args.train_backbone = True
+        
+    if args.temporal == "lstm":
+        ModelCatalog.register_custom_model("model", SingleBeogymModel)
+        #do all the config overwrites here
+        use_config.update(
+                    {
+                        "env" : use_env,
+                        "env_config": env_config,
+                        "logger_config" : {
+                            "type": UnifiedLogger,
+                            "logdir": os.path.expanduser(args.log + '/' + str_logger)
+                        }
+                    }
+                )
+
+    elif args.temporal == '2lstm':
+        ModelCatalog.register_custom_model(
+            "my_model", LSTM2Network
+        )
+        use_config.update(
+                {
+                    "model": {"custom_model": "my_model",
+                              "vf_share_layers": True,
+                              "conv_filters": [[16, 3, 2], [32, 3, 2], [64, 3, 2], [128, 3, 2], [256, 3, 2]]
+
+                    },
+                }
+            )
+
+    else:
+        print("1chanlstm********************")
+        ModelCatalog.register_custom_model("model", BeogymCNNV2PlusRNNModel)
+        #do all the config overwrites here
+        use_config.update(
+                    {
+                        "env" : use_env,
+                        "env_config": env_config,
+                        "logger_config" : {
+                            "type": UnifiedLogger,
+                            "logdir": os.path.expanduser(args.log + '/' + str_logger)
+                        },
+                        'model':{
+                            "custom_model": "model",
+                            "custom_model_config" : {"backbone": args.backbone, "backbone_path": args.ckpt + args.env_name + "/" + args.backbone, "train_backbone": args.train_backbone, 'temporal': args.temporal},
+                            "framestack": True,
+                            "use_lstm": False,
+                            "vf_share_layers": True,
+                            "conv_filters": [[16, 3, 2], [32, 3, 2], [64, 3, 2], [128, 3, 2], [256, 3, 2]],
+                        },
+                    }
+                )
+
+
+    #start the training loop
+    rllib_loop(use_config, str_logger)
+
+
+
+#SAVE CHECKPOINTS FOR 1.A PROPERLY!!!
 #sequential learning
 #this function reuses the train_singleenv function
 def seq_train(str_logger):
@@ -240,8 +305,14 @@ def seq_train(str_logger):
         args.train_backbone = True
 
     #register the model
-    ModelCatalog.register_custom_model("model", SingleAtariModel)
+    if args.env_name == "atari":
+        ModelCatalog.register_custom_model("model", SingleAtariModel)
     
+    else:
+        ModelCatalog.register_custom_model("model", SingleBeogymModel)
+    
+    print(configs.all_envs)
+
     #In the forloop base config and spec stays the same
     for eachenv in configs.all_envs:
         #in the for loop set the previous models weights
@@ -286,6 +357,7 @@ def train_multienv(str_logger):
             ModelCatalog.register_custom_model("model_" + str(i), mods[i])
 
     elif "backbone" in args.shared:
+        print("shared backbone")
         mods = [SharedBackboneAtariModel]*len(configs.all_envs)
         for i in range(len(configs.all_envs)):
             ModelCatalog.register_custom_model("model_" + str(i), mods[i])
@@ -325,6 +397,7 @@ def train_multienv(str_logger):
         )
 
     if args.shared == "full":
+        print("full sharing")
         use_config["multiagent"]["policies"] = {"model"}
         use_config["multiagent"]["policy_mapping_fn"] = (lambda agent_id, episode, **kwargs: "model")
 
@@ -332,6 +405,11 @@ def train_multienv(str_logger):
     #adapter and policy is a list
     rllib_loop(use_config, str_logger)
 
+
+
+
+"""
+## All the below functions are depricated
 
 def beogym_single_train(str_logger, backbone='e2e', policy=None):
 
@@ -379,35 +457,6 @@ def beogym_single_train(str_logger, backbone='e2e', policy=None):
     rllib_loop(use_config, str_logger)
 
 
-def beogym_seq_train(str_logger):
-
-    #get the base atari_config to incorporate the environments
-    #construct the base env class from envs.py based on the env_name
-    use_config, use_env = pick_config_env('single')
-
-    #register the model
-    ModelCatalog.register_custom_model("model", SingleBeogymModel)
-    
-    #In the forloop base config and spec stays the same
-    for eachenv in configs.all_envs: 
-        #in the for loop set the previous models weights
-        #adapter, policy, backbone
-        #env_config consists of which games we use
-        use_config.update(
-            {"env" : envs.ParellelBeoEnv, 
-             "env_config" : {"city":eachenv},
-             "model": {"custom_model" : "model",
-                        "vf_share_layers": True
-             },
-             "logger_config" : {
-                "type": UnifiedLogger,
-                "logdir": os.path.expanduser(args.log + '/' + str_logger)
-                }
-            }
-        )
-
-        rllib_loop(use_config)
-
 
 def beogym_train_multienv(str_logger):
 
@@ -436,12 +485,13 @@ def beogym_train_multienv(str_logger):
         pol_id = policy_ids[agent_id%envs]
         return pol_id
 
+    print(configs.all_envs)
     # modify atari_config to incorporate the current environment
     #do all the config overwrites here
     use_config.update(
             {
                     "env" : use_env, 
-                    "env_config" : {'envs': configs.all_envs},
+                    "env_config" : {'envs': configs.all_envs, 'data_path':args.data_path},
                     "logger_config" : {
                         "type": UnifiedLogger,
                         "logdir": os.path.expanduser(args.log + '/' + str_logger)
@@ -459,3 +509,6 @@ def beogym_train_multienv(str_logger):
     #multistuff is a tuple
     #adapter and policy is a list
     rllib_loop(use_config)
+
+
+"""
