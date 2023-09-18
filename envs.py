@@ -158,6 +158,7 @@ class SingleBeoEnv(gym.Env):
 
 
     def step(self, action):
+        print(action)
         return self.env.step(action)
 
 

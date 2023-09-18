@@ -121,6 +121,7 @@ class VAE(nn.Module):
 class TEncoder(nn.Module):
     def __init__(self, channel_in=3, ch=16, z=64, h_dim=512, activation="relu"):
         super(TEncoder, self).__init__()
+        self.activation = activation
         if activation == "relu":
             conv_activation = nn.ReLU()
         else:
@@ -142,7 +143,8 @@ class TEncoder(nn.Module):
     def forward(self, x):
         x = self.encoder(x)
         x = self.conv_mu(x)
-        #x = torch.flatten(x, start_dim=1)
+        if self.activation == "elu":
+            x = torch.flatten(x, start_dim=1)
         return x
 
 

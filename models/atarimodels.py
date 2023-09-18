@@ -64,17 +64,23 @@ class SingleAtariModel(VisionNetwork):
         self, observation_space, action_space, num_outputs, model_config, name
     ):
         super().__init__(observation_space, action_space, num_outputs, model_config, name)
-        if "RESNET" in model_config['custom_model_config']['backbone'] and "DUAL" in model_config['custom_model_config']['backbone']:            
-            self._convs = TEncoder(channel_in=4, ch=64, z=512)
-        elif "RESNET" in model_config['custom_model_config']['backbone']:
-            self._convs = TEncoder(channel_in=4, ch=64, z=512)
-        elif 'DUAL' in model_config['custom_model_config']['backbone']:
-            self._convs = Encoder(channel_in=4, ch=32, z=512)
-        elif '4STACK_CONT' in model_config['custom_model_config']['backbone']:
-            self._convs = TEncoder(channel_in=4, ch=32, z=512)
-        elif '4STACK_VAE' in model_config['custom_model_config']['backbone']:
-            self._convs = VAE(channel_in=4, ch=32, z=512)
 
+        chan_in = 1 if model_config['custom_model_config']['temporal'] == 'notemp' or model_config['custom_model_config']['temporal'] == 'lstm' else 4
+
+        activation = "elu" if model_config['custom_model_config']['temporal'] == 'lstm' else 'relu'
+        
+        if "RESNET" in model_config['custom_model_config']['backbone'] and "DUAL" in model_config['custom_model_config']['backbone']:            
+            self._convs = TEncoder(channel_in=chan_in, ch=64, z=512)
+        elif "RESNET" in model_config['custom_model_config']['backbone']:
+            self._convs = TEncoder(channel_in=chan_in, ch=64, z=512)
+        elif 'DUAL' in model_config['custom_model_config']['backbone']:
+            self._convs = Encoder(channel_in=chan_in, ch=32, z=512)
+        elif '4STACK_CONT' in model_config['custom_model_config']['backbone']:
+            self._convs = TEncoder(channel_in=chan_in, ch=32, z=512)
+        elif '4STACK_VAE' in model_config['custom_model_config']['backbone']:
+            self._convs = VAE(channel_in=chan_in, ch=32, z=512)
+        else:
+            self._convs = TEncoder(channel_in=chan_in, ch=32, z=512, activation=activation)
 
         #if 'e2e' not in model_config['custom_model_config']['backbone'] and model_config['custom_model_config']['backbone'] != 'random':
         #if 'e2e' not in model_config['custom_model_config']['backbone']:
@@ -148,22 +154,28 @@ class AtariCNNV2PlusRNNModel(TorchRNN, nn.Module):
         )
         nn.Module.__init__(self)
 
-        self.lstm_state_size = 512 #originally 16
+        #HARDCODED!!
+        self.num_outputs = 6
+
+        self.lstm_state_size = 512
+        self.visual_size_out = 512
+
         self.cnn_shape = [1, 84, 84]
         self.visual_size_in = self.cnn_shape[0] * self.cnn_shape[1] * self.cnn_shape[2]
         # MobileNetV2 has a flat output of (1000,).
-        self.visual_size_out = 512
+
 
         # Load the MobileNetV2 from torch.hub.
         if "RESNET" in model_config['custom_model_config']['backbone'] and "DUAL" in model_config['custom_model_config']['backbone']:            
-            self._convs = Encoder(channel_in=1, ch=64, z=512)
+            self._convs = Encoder(channel_in=1, ch=64, z=512, activation="elu")
         elif "RESNET" in model_config['custom_model_config']['backbone']:
-            self._convs = TEncoder(channel_in=1, ch=64, z=512)
+            self._convs = TEncoder(channel_in=1, ch=64, z=512, activation="elu")
         elif 'DUAL' in model_config['custom_model_config']['backbone']:
-            self._convs = Encoder(channel_in=1, ch=32, z=512)
+            self._convs = Encoder(channel_in=1, ch=32, z=512, activation="elu")
         else:
             #self._convs = TEncoder(channel_in=1, ch=32, z=512)
             self._convs = TEncoder(channel_in=1, ch=32, z=512, activation="elu")
+
         
         print(self._convs)
         self.lstm = nn.LSTM(
@@ -183,26 +195,28 @@ class AtariCNNV2PlusRNNModel(TorchRNN, nn.Module):
             
             lstm_ckpt = {}
             convs_ckpt = {}
-            for eachkey in checkpoint['model_state_dict']:
-                if 'lstm' in eachkey:
-                    newkey = eachkey.replace('lstm.', '')
-                    lstm_ckpt[newkey] = checkpoint['model_state_dict'][eachkey]
-                else:
-                    if 'conv_mu' in eachkey:
-                        newkey = eachkey.replace('encoder.', '')
-                    else:
-                        newkey = eachkey.replace('encoder.encoder', 'encoder')
-                    convs_ckpt[newkey] = checkpoint['model_state_dict'][eachkey]
-            
+            #for eachkey in checkpoint['model_state_dict']:
+                #if 'lstm' in eachkey:
+                #    newkey = eachkey.replace('lstm.', '')
+                #    lstm_ckpt[newkey] = checkpoint['model_state_dict'][eachkey]
+                #else:
+                #    if 'conv_mu' in eachkey:
+                #        newkey = eachkey.replace('encoder.', '')
+                #    else:
+                #        newkey = eachkey.replace('encoder.encoder', 'encoder')
+                #convs_ckpt[newkey] = checkpoint['model_state_dict'][eachkey]
+
+
             #for each in self._convs.named_parameters():
             #    print(each[0])
 
             #create cnn_modstdict
-            self._convs.load_state_dict(convs_ckpt)
-        
+            #self._convs.load_state_dict(convs_ckpt)
+
             #create lstm_modstdict
-            self.lstm.load_state_dict(lstm_ckpt)
-            
+            #self.lstm.load_state_dict(lstm_ckpt)
+            self._convs.load_state_dict(checkpoint['model_state_dict'])
+
         if not model_config['custom_model_config']['train_backbone']:
             print("freezing encoder layers")
             #freeze the entire backbone
@@ -210,18 +224,20 @@ class AtariCNNV2PlusRNNModel(TorchRNN, nn.Module):
             for param in self._convs.parameters():
                 param.requires_grad = False
 
-            self.lstm.eval()
-            for param in self.lstm.parameters():
-                param.requires_grad = False
+            #self.lstm.eval()
+            #for param in self.lstm.parameters():
+            #    param.requires_grad = False
 
         
     @override(TorchRNN)
     def forward_rnn(self, inputs, state, seq_lens):
         # Create image dims.
         vision_in = torch.reshape(inputs, [-1] + self.cnn_shape)
-        vision_out = torch.flatten(self._convs(vision_in), start_dim=1)
+        
         # Flatten.
-
+        vision_out = self._convs(vision_in)
+        #vision_out = torch.flatten(self._convs(vision_in), start_dim=1)
+        
         vision_out_time_ranked = torch.reshape(
             vision_out, [inputs.shape[0], inputs.shape[1], vision_out.shape[-1]]
         )

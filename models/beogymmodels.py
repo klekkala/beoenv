@@ -67,7 +67,17 @@ class SingleBeogymModel(TorchModelV2, nn.Module):
             self, observation_space, action_space, num_outputs, model_config, name
         )
         nn.Module.__init__(self)
+        embed()
 
+class FrozenBackboneModel(ComplexInputNetwork):
+        def _init_(self, observation_space, action_space, num_outputs, model_config, name):
+            super()._init_(observation_space, action_space, num_outputs, model_config, name)
+            self.cnns[1].eval()
+            for param in self.cnns[1].parameters():
+                param.requires_grad = False
+            for name, param in self.cnns[1].named_parameters():
+                param.requires_grad = False
+                
 
 
 
@@ -128,26 +138,29 @@ class BeogymCNNV2PlusRNNModel(TorchRNN, nn.Module):
             
             lstm_ckpt = {}
             convs_ckpt = {}
-            for eachkey in checkpoint['model_state_dict']:
-                if 'lstm' in eachkey:
-                    newkey = eachkey.replace('lstm.', '')
-                    lstm_ckpt[newkey] = checkpoint['model_state_dict'][eachkey]
-                else:
-                    if 'conv_mu' in eachkey:
-                        newkey = eachkey.replace('encoder.', '')
-                    else:
-                        newkey = eachkey.replace('encoder.encoder', 'encoder')
-                    convs_ckpt[newkey] = checkpoint['model_state_dict'][eachkey]
-            
+            #for eachkey in checkpoint['model_state_dict']:
+                #if 'lstm' in eachkey:
+                #    newkey = eachkey.replace('lstm.', '')
+                #    lstm_ckpt[newkey] = checkpoint['model_state_dict'][eachkey]
+                #else:
+                #    if 'conv_mu' in eachkey:
+                #        newkey = eachkey.replace('encoder.', '')
+                #    else:
+                #        newkey = eachkey.replace('encoder.encoder', 'encoder')
+                #convs_ckpt[newkey] = checkpoint['model_state_dict'][eachkey]
+
+
             #for each in self._convs.named_parameters():
             #    print(each[0])
 
             #create cnn_modstdict
-            self._convs.load_state_dict(convs_ckpt)
-        
+            #self._convs.load_state_dict(convs_ckpt)
+
             #create lstm_modstdict
-            self.lstm.load_state_dict(lstm_ckpt)
-            
+            #self.lstm.load_state_dict(lstm_ckpt)
+
+            self._convs.load_state_dict(checkpoint['model_state_dict'])
+
         if not model_config['custom_model_config']['train_backbone']:
             print("freezing encoder layers")
             #freeze the entire backbone
@@ -155,9 +168,9 @@ class BeogymCNNV2PlusRNNModel(TorchRNN, nn.Module):
             for param in self._convs.parameters():
                 param.requires_grad = False
 
-            self.lstm.eval()
-            for param in self.lstm.parameters():
-                param.requires_grad = False
+            #self.lstm.eval()
+            #for param in self.lstm.parameters():
+            #    param.requires_grad = False
 
         
     @override(TorchRNN)
@@ -208,7 +221,7 @@ class BeogymCNNV2PlusRNNModel(TorchRNN, nn.Module):
     
 
 
-### Below class is depricated
+### BELOW CLASS IS DEPRICATED!!!!!!!!!!!
 
 class LSTM2Network(TorchRNN, nn.Module):
     """A conv. + recurrent torch net example using a pre-trained MobileNet."""

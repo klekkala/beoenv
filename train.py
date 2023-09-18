@@ -202,9 +202,12 @@ def single_train(str_logger, backbone='e2e', policy=None):
         args.train_backbone = True
 
 
-    if "1CHANLSTM" in args.backbone:
+    if "1CHAN" in args.backbone and args.temporal == "lstm":
         ModelCatalog.register_custom_model("model", AtariCNNV2PlusRNNModel)
         env_config['framestack'] = False
+        use_config["model"]["use_lstm"] = False
+
+    #include notemp case     
     else:
         ModelCatalog.register_custom_model("model", SingleAtariModel)
 
@@ -220,7 +223,6 @@ def single_train(str_logger, backbone='e2e', policy=None):
                 }
             )
 
-
     #start the training loop
     rllib_loop(use_config, str_logger)
 
@@ -233,7 +235,8 @@ def beogym_single_train(str_logger, backbone='e2e', policy=None):
 
     if args.backbone == "e2e":
         args.train_backbone = True
-        
+    
+    """
     if args.temporal == "lstm":
         ModelCatalog.register_custom_model("model", SingleBeogymModel)
         #do all the config overwrites here
@@ -261,29 +264,29 @@ def beogym_single_train(str_logger, backbone='e2e', policy=None):
                     },
                 }
             )
-
-    else:
-        print("1chanlstm********************")
-        ModelCatalog.register_custom_model("model", BeogymCNNV2PlusRNNModel)
-        #do all the config overwrites here
-        use_config.update(
-                    {
-                        "env" : use_env,
-                        "env_config": env_config,
-                        "logger_config" : {
-                            "type": UnifiedLogger,
-                            "logdir": os.path.expanduser(args.log + '/' + str_logger)
-                        },
-                        'model':{
-                            "custom_model": "model",
-                            "custom_model_config" : {"backbone": args.backbone, "backbone_path": args.ckpt + args.env_name + "/" + args.backbone, "train_backbone": args.train_backbone, 'temporal': args.temporal},
-                            "framestack": True,
-                            "use_lstm": False,
-                            "vf_share_layers": True,
-                            "conv_filters": [[16, 3, 2], [32, 3, 2], [64, 3, 2], [128, 3, 2], [256, 3, 2]],
-                        },
-                    }
-                )
+    """
+    #else:
+    print("1chanlstm********************")
+    #ModelCatalog.register_custom_model("model", BeogymCNNV2PlusRNNModel)
+    #do all the config overwrites here
+    use_config.update(
+                {
+                    "env" : use_env,
+                    "env_config": env_config,
+                    "logger_config" : {
+                        "type": UnifiedLogger,
+                        "logdir": os.path.expanduser(args.log + '/' + str_logger)
+                    },
+                    'model':{
+                        "custom_model": "model",
+                        "custom_model_config" : {"backbone": args.backbone, "backbone_path": args.ckpt + args.env_name + "/" + args.backbone, "train_backbone": args.train_backbone, 'temporal': args.temporal},
+                        "framestack": True,
+                        "use_lstm": False,
+                        "vf_share_layers": True,
+                        "conv_filters": [[16, 3, 2], [32, 3, 2], [64, 3, 2], [128, 3, 2], [256, 3, 2]],
+                    },
+                }
+            )
 
 
     #start the training loop

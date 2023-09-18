@@ -81,6 +81,7 @@ atari_config = {
         "use_lstm": args.temporal == 'lstm',
         "use_attention": args.temporal == 'attention',
     },
+    #"horizon": 1500,
     "kl_coeff" : args.kl_coeff,
     "clip_param" : args.clip_param,
     "entropy_coeff" : args.entropy_coeff,
@@ -109,6 +110,7 @@ beogym_config = {
     "rollout_fragment_length" : 1000,
     "num_envs_per_worker" : args.num_envs,
     'model':{
+                "custom_model": "model",
                 "use_lstm": True,
                 "lstm_cell_size": 256,
                 "lstm_use_prev_action" : True,
