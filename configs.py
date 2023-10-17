@@ -81,7 +81,7 @@ atari_config = {
         "use_lstm": args.temporal == 'lstm',
         "use_attention": args.temporal == 'attention',
     },
-    #"horizon": 1500,
+    "horizon": 4650,
     "kl_coeff" : args.kl_coeff,
     "clip_param" : args.clip_param,
     "entropy_coeff" : args.entropy_coeff,

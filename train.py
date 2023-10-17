@@ -278,9 +278,9 @@ def beogym_single_train(str_logger, backbone='e2e', policy=None):
                         "logdir": os.path.expanduser(args.log + '/' + str_logger)
                     },
                     'model':{
-                        "custom_model": "model",
-                        "custom_model_config" : {"backbone": args.backbone, "backbone_path": args.ckpt + args.env_name + "/" + args.backbone, "train_backbone": args.train_backbone, 'temporal': args.temporal},
-                        "framestack": True,
+                        # "custom_model": "model",
+                        # "custom_model_config" : {"backbone": args.backbone, "backbone_path": args.ckpt + args.env_name + "/" + args.backbone, "train_backbone": args.train_backbone, 'temporal': args.temporal},
+                        # "framestack": True,
                         "use_lstm": False,
                         "vf_share_layers": True,
                         "conv_filters": [[16, 3, 2], [32, 3, 2], [64, 3, 2], [128, 3, 2], [256, 3, 2]],

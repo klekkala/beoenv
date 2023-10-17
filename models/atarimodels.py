@@ -82,6 +82,7 @@ class SingleAtariModel(VisionNetwork):
         else:
             self._convs = TEncoder(channel_in=chan_in, ch=32, z=512, activation=activation)
 
+
         #if 'e2e' not in model_config['custom_model_config']['backbone'] and model_config['custom_model_config']['backbone'] != 'random':
         #if 'e2e' not in model_config['custom_model_config']['backbone']:
             #if model_config['custom_model_config']['backbone'] == 'random':
@@ -102,9 +103,12 @@ class SingleAtariModel(VisionNetwork):
         if "e2e" not in model_config['custom_model_config']['backbone_path'] and "random" not in model_config['custom_model_config']['backbone_path']:
             print(model_config['custom_model_config']['backbone_path'])
             print("loading model weights")
-            checkpoint = torch.load(model_config['custom_model_config']['backbone_path'], map_location="cpu")
+            #checkpoint = torch.load(model_config['custom_model_config']['backbone_path'], map_location="cpu")
+            
+            checkpoint = torch.load(model_config['custom_model_config']['backbone_path'])
             self._convs.load_state_dict(checkpoint['model_state_dict'])
-        
+            print("loss_log is", np.mean(checkpoint['loss_log']))
+            #embed() 
         if not model_config['custom_model_config']['train_backbone']:
             print("freezing encoder layers")
             #freeze the entire backbone

@@ -46,7 +46,7 @@ dparser.add_argument(
     "--stop_timesteps", type=int, default=1000000, help="Number of timesteps to train."
 )
 dparser.add_argument(
-    "--dpath", type=str, default="/lab/tmpig14c/kiran/trained_4stack_", help="Number of timesteps to train."
+    "--dpath", type=str, default="/lab/tmpig10f/kiran/trained_1chan_", help="Number of timesteps to train."
 )
 dparser.add_argument(
     "--game", type=str, default="", help="machine to be training"
@@ -57,7 +57,11 @@ args = dparser.parse_args()
 
 ModelCatalog.register_custom_model("model", SingleAtariModel)
 
+choices = {
+    'DemonAttackNoFrameskip-v4': ('demonattack', '/lab/kiran/logs/rllib/atari/notemp/1.a_DemonAttackNoFrameskip-v4_singlegame_full_1CHAN_VIP_ATARI_EXPERT_1CHAN_DEMONATTACK_STANDARD_150_0.95_32_0_0.0001_7.pt_PolicyNotLoaded_0.0_20000_2000_notemp/23_09_27_20_12_50/checkpoint/'),
+}
 
+"""
 choices = {
     'CarnivalNoFrameskip-v4': ('carnival', '/lab/kiran/logs/rllib/atari/4stack/1.a_CarnivalNoFrameskip-v4_singlegame_full_4STACK_CONT_ATARI_EXPERT_4STACK_TRAIN_RESNET_0.1_0.01_512_512.pt_PolicyNotLoaded_0.0_20000_2000_4stack/23_08_07_18_30_07/checkpoint/'),
     'DemonAttackNoFrameskip-v4': ('demonattack', '/lab/kiran/logs/rllib/atari/4stack/1.a_DemonAttackNoFrameskip-v4_singlegame_full_4STACK_CONT_ATARI_EXPERT_4STACK_TRAIN_RESNET_0.1_0.01_512_512.pt_PolicyNotLoaded_0.0_20000_2000_4stack/23_08_06_09_12_11/checkpoint/'),
@@ -65,7 +69,7 @@ choices = {
     'NameThisGameNoFrameskip-v4': ('namethisgame', '/lab/kiran/logs/rllib/atari/4stack/1.a_NameThisGameNoFrameskip-v4_singlegame_full_4STACK_CONT_ATARI_EXPERT_4STACK_TRAIN_RESNET_0.1_0.01_512_512.pt_PolicyNotLoaded_0.0_20000_2000_4stack/23_08_06_09_14_07/checkpoint/'),
     'SpaceInvadersNoFrameskip-v4': ('spaceinvaders', '/lab/kiran/logs/rllib/atari/4stack/1.a_SpaceInvadersNoFrameskip-v4_singlegame_full_4STACK_CONT_ATARI_EXPERT_4STACK_TRAIN_RESNET_0.1_0.01_512_512.pt_PolicyNotLoaded_0.0_20000_2000_4stack/23_08_06_09_16_00/checkpoint/')
 }
-
+"""
 encodernet = Policy.from_checkpoint(choices[args.game][1])
 
 

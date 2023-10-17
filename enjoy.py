@@ -52,26 +52,25 @@ ModelCatalog.register_custom_model("model", SingleAtariModel)
 
 #encodernet = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/4stack/1.a_DemonAttackNoFrameskip-v4_singlegame_full_4STACK_CONT_ATARI_EXPERT_4STACK_DEMONATTACK_STANDARD_0.1_0.01_512_512.pt_PolicyNotLoaded_0.0_20000_2000_4stack/23_07_27_15_53_30/checkpoint/')
 
-embed()
 
-objects = []
-with (open('/lab/kiran/logs/rllib/atari/lstm/1.a_DemonAttackNoFrameskip-v4_singlegame_full_e2e_PolicyNotLoaded_0.0_20000_2000_lstm/23_08_16_00_21_36/checkpoint/policy_state.pkl', "rb")) as openfile:
-    while True:
-        try:
-            objects.append(pickle.load(openfile))
-        except EOFError:
-            break
+# objects = []
+# with (open('/lab/kiran/logs/rllib/atari/notemp/1.a_DemonAttackNoFrameskip-v4_singlegame_full_1CHAN_VIP_ATARI_EXPERT_1CHAN_DEMONATTACK_STANDARD_50_0.95_32_3_0.0001_0.pt_PolicyNotLoaded_0.0_20000_2000_notemp/23_10_02_16_30_00/checkpoint/policy_state.pkl', "rb")) as openfile:
+#     while True:
+#         try:
+#             objects.append(pickle.load(openfile))
+#         except EOFError:
+#             break
 
 #encodernet = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/lstm/1.a_DemonAttackNoFrameskip-v4_singlegame_full_e2e_PolicyNotLoaded_0.0_20000_2000_lstm/23_08_16_00_21_36/checkpoint/')
-
+encodernet = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/notemp/1.a_SpaceInvadersNoFrameskip-v4_singlegame_full_e2e_PolicyNotLoaded_0.0_20000_2000_notemp/23_10_11_15_12_08/checkpoint/')
 
 args = get_args()
 print(args.log + "/" + args.temporal + "/" + args.backbone + "/checkpoint/")
 
 res=[]
-rounds=50
+rounds=20
 
-env = SingleAtariEnv({'env': args.set, 'full_action_space': False, 'framestack': args.temporal == '4stack'})
+env = SingleAtariEnv({'env': 'SpaceInvadersNoFrameskip-v4', 'full_action_space': False, 'framestack': args.temporal == '4stack'})
 
 obs_np = []
 act_np = []
@@ -105,5 +104,22 @@ average = sum(res) / len(res)
 print(average)
 
 
-#with open('Name.txt','w') as f:
-#    f.write(str(res))
+# import cv2
+
+# output_file = 'output_video.mp4'
+# fps = 30
+# frame_size = (84, 84)  # Size of each frame
+
+# fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Codec for MP4 format
+# out = cv2.VideoWriter(output_file, fourcc, fps, frame_size,isColor=False)
+# frames = obs_np
+# for idx in range(len(frames)):
+#     frame = frames[idx]
+#     frame = np.uint8(frame)  # Ensure frame data type is uint8
+#     out.write(frame)
+
+# out.release()
+
+# cv2.destroyAllWindows()
+
+
