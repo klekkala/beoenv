@@ -70,16 +70,74 @@ class SingleBeogymModel(TorchModelV2, nn.Module):
         embed()
 
 class FrozenBackboneModel(ComplexInputNetwork):
-        def _init_(self, observation_space, action_space, num_outputs, model_config, name):
-            super()._init_(observation_space, action_space, num_outputs, model_config, name)
-            self.cnns[1].eval()
-            for param in self.cnns[1].parameters():
-                param.requires_grad = False
-            for name, param in self.cnns[1].named_parameters():
-                param.requires_grad = False
+    def _init_(self, observation_space, action_space, num_outputs, model_config, name):
+        super()._init_(observation_space, action_space, num_outputs, model_config, name)
+        print('frozen')
+        self.cnns[1].eval()
+        for param in self.cnns[1].parameters():
+            param.requires_grad = False
+        for name, param in self.cnns[1].named_parameters():
+            param.requires_grad = False
                 
 
+    @override(ModelV2)
+    def forward(self, input_dict, state, seq_lens):
+        if SampleBatch.OBS in input_dict and "obs_flat" in input_dict:
+            orig_obs = input_dict[SampleBatch.OBS]
+        else:
+            orig_obs = restore_original_dimensions(
+                input_dict[SampleBatch.OBS], self.processed_obs_space, tensorlib="torch"
+            )
 
+        outs = []
+        for i, component in enumerate(tree.flatten(orig_obs)):
+            if i in self.cnns:
+                for param in self.cnns[1].parameters():
+                    param.requires_grad = False
+                cnn_out, _ = self.cnns[i](SampleBatch({SampleBatch.OBS: component}))
+                outs.append(torch.randn_like(cnn_out))
+            elif i in self.one_hot:
+                if component.dtype in [
+                    torch.int8,
+                    torch.int16,
+                    torch.int32,
+                    torch.int64,
+                    torch.uint8,
+                ]:
+                    one_hot_in = {
+                        SampleBatch.OBS: one_hot(
+                            component, self.flattened_input_space[i]
+                        )
+                    }
+                else:
+                    one_hot_in = {SampleBatch.OBS: component}
+                one_hot_out, _ = self.one_hot[i](SampleBatch(one_hot_in))
+                outs.append(one_hot_out)
+            else:
+                nn_out, _ = self.flatten[i](
+                    SampleBatch(
+                        {
+                            SampleBatch.OBS: torch.reshape(
+                                component, [-1, self.flatten_dims[i]]
+                            )
+                        }
+                    )
+                )
+                outs.append(nn_out)
+
+        # Concat all outputs and the non-image inputs.
+        out = torch.cat(outs, dim=1)
+        # Push through (optional) FC-stack (this may be an empty stack).
+        out, _ = self.post_fc_stack(SampleBatch({SampleBatch.OBS: out}))
+
+        # No logits/value branches.
+        if self.logits_layer is None:
+            return out, []
+
+        # Logits- and value branches.
+        logits, values = self.logits_layer(out), self.value_layer(out)
+        self._value_out = torch.reshape(values, [-1])
+        return logits, []
 
 #class SharedBackboneAtariModel(ComplexInputNetwork):
 #        def __init__(self, observation_space, action_space, num_outputs, model_config, name):

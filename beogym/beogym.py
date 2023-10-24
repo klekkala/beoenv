@@ -35,7 +35,7 @@ class BeoGym(gym.Env):
             self.observation_space = gym.spaces.Box(low=-1, high=1, shape=(6,), dtype=np.float32)
         else:
             self.observation_space = gym.spaces.Dict(
-                {"obs": spaces.Box(low=0, high=255, shape=(84, 84, 3), dtype=np.uint8),
+                {"obs": spaces.Box(low=0, high=255, shape=(84, 84, 4), dtype=np.uint8),
                  "aux": spaces.Box(low=-1.0, high=1.0, shape=(2,), dtype=np.float32)})
 
         self.seed(1)
@@ -57,7 +57,7 @@ class BeoGym(gym.Env):
         #self.courier_goal = (-20.314332722434187, -32.017853841967224)
         self.last_action = -1
         self.this_action = -1
-
+        self.frames=[]
         # while True:
         #     self.courier_goal = self.dh.sample_location()
         #     dis=gt.shortest_distance(self.dh.G, source=self.dh.G.vertex(self.dh.Gdict[self.agent.agent_pos_curr]), target=self.dh.G.vertex(self.dh.Gdict[self.courier_goal]), weights=self.dh.G.ep['weight'])
@@ -145,6 +145,13 @@ class BeoGym(gym.Env):
             p_view = self.agent.curr_view[0:208,104:312]
             # p_view = cv2.resize(self.agent.curr_view, (84, 84))
             p_view = cv2.resize(p_view, (84, 84))
+            gray_image = cv2.cvtColor(p_view, cv2.COLOR_RGB2GRAY)
+            # self.agent.past_view = np.zeros((gray_image.shape[0], gray_image.shape[1], 4), dtype=np.float32)
+            # self.agent.past_view = np.concatenate((self.agent.past_view, np.expand_dims(gray_image, axis=-1)), axis=-1)
+            # return {'obs': self.agent.past_view, 'aux': np.array(aux)}
+            self.frames = np.repeat(gray_image[:, :, np.newaxis], 4, axis=2)
+            return {'obs': self.frames, 'aux': np.array(aux)}
+
             return {'obs': p_view, 'aux': np.array(aux)}
 
     def step(self, action):
@@ -216,7 +223,10 @@ class BeoGym(gym.Env):
             # #return {'obs': self.agent.curr_view, 'aux': np.array(aux)}, reward, terminated,truncated, info
             p_view = self.agent.curr_view[0:208,104:312]
             p_view = cv2.resize(p_view, (84, 84))
-            # p_view = cv2.resize(self.agent.curr_view, (84, 84))
+            gray_image = cv2.cvtColor(p_view, cv2.COLOR_RGB2GRAY)
+            self.frames[:-1] = self.frames[1:]
+            self.frames[..., -1] = gray_image
+            return {'obs': self.frames, 'aux': np.array(aux)}, reward, done, info
             return {'obs': p_view, 'aux': np.array(aux)}, reward, done, info
 
     def render(self, mode='human', steps=100):

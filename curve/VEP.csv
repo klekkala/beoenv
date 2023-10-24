@@ -1,5 +1,2 @@
-,DemonAttackNoFrameskip-v4 encoder SpaceInvadersNoFrameskip-v4 policy on SpaceInvadersNoFrameskip-v4,DemonAttackNoFrameskip-v4 encoder SpaceInvadersNoFrameskip-v4 policy on DemonAttackNoFrameskip-v4
-e2e,63.5/132.5,103.0/129.5
-SOM,152.0/148.0,80.0/60.0
-TCN,1.5/149.0,231.5/75.0
-VEP,105.5/124.0,49.0/92.0
+,SpaceInvadersNoFrameskip-v4 encoder DemonAttackNoFrameskip-v4 policy on SpaceInvadersNoFrameskip-v4,DemonAttackNoFrameskip-v4 encoder SpaceInvadersNoFrameskip-v4 policy on DemonAttackNoFrameskip-v4
+random,183.0/136.0,1.0/52.0

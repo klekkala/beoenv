@@ -31,7 +31,7 @@ from ray.rllib.policy.sample_batch import SampleBatch
 from ray.rllib.evaluation import Episode, RolloutWorker
 from ray.rllib.algorithms.algorithm_config import AlgorithmConfig
 from models.atarimodels import SingleAtariModel, SharedBackboneAtariModel, SharedBackbonePolicyAtariModel, AtariCNNV2PlusRNNModel
-from models.beogymmodels import SingleBeogymModel, BeogymCNNV2PlusRNNModel
+from models.beogymmodels import SingleBeogymModel, BeogymCNNV2PlusRNNModel, FrozenBackboneModel
 from ray.rllib.algorithms.ppo import PPOConfig
 from typing import Dict, Tuple
 import gym
@@ -235,7 +235,9 @@ def beogym_single_train(str_logger, backbone='e2e', policy=None):
 
     if args.backbone == "e2e":
         args.train_backbone = True
-    
+
+    else:
+        args.train_backbone = False
     """
     if args.temporal == "lstm":
         ModelCatalog.register_custom_model("model", SingleBeogymModel)
@@ -267,7 +269,7 @@ def beogym_single_train(str_logger, backbone='e2e', policy=None):
     """
     #else:
     print("1chanlstm********************")
-    #ModelCatalog.register_custom_model("model", BeogymCNNV2PlusRNNModel)
+    ModelCatalog.register_custom_model("fro_model", FrozenBackboneModel)
     #do all the config overwrites here
     use_config.update(
                 {
@@ -278,8 +280,8 @@ def beogym_single_train(str_logger, backbone='e2e', policy=None):
                         "logdir": os.path.expanduser(args.log + '/' + str_logger)
                     },
                     'model':{
-                        # "custom_model": "model",
-                        # "custom_model_config" : {"backbone": args.backbone, "backbone_path": args.ckpt + args.env_name + "/" + args.backbone, "train_backbone": args.train_backbone, 'temporal': args.temporal},
+                        "custom_model": "fro_model",
+                        #  "custom_model_config" : {"backbone": args.backbone, "backbone_path": args.ckpt + args.env_name + "/" + args.backbone, "train_backbone": args.train_backbone, 'temporal': args.temporal},
                         # "framestack": True,
                         "use_lstm": False,
                         "vf_share_layers": True,

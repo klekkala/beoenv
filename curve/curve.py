@@ -20,12 +20,31 @@ data_path = sys.argv[1]
 
 game = data_path.split('_')[-1]
 game = game.split('/')[0]
+#original
+# encodernet_e2e = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/notemp/1.a_DemonAttackNoFrameskip-v4_singlegame_full_e2e_PolicyNotLoaded_0.0_20000_2000_notemp/23_10_11_15_10_22/checkpoint/')
+# encodernet_random = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/notemp/1.a_DemonAttackNoFrameskip-v4_singlegame_full_random_PolicyNotLoaded_0.0_20000_2000_notemp/23_10_14_19_15_21/checkpoint/')
+# encodernet_SOM = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/notemp/1.a_DemonAttackNoFrameskip-v4_singlegame_full_1CHAN_SOM_ATARI_EXPERT_1CHAN_SPACEDEMO_STANDARD_150_0.1_32_32_0.0001_0.pt_PolicyNotLoaded_0.0_20000_2000_notemp/23_10_12_14_10_18/checkpoint/')
+# encodernet_TCN = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/notemp/1.a_DemonAttackNoFrameskip-v4_singlegame_full_1CHAN_TCN_ATARI_EXPERT_1CHAN_SPACEDEMO_STANDARD_4.0_0.01_32_32_0.0001_0.pt_PolicyNotLoaded_0.0_20000_2000_notemp/23_10_12_11_47_47/checkpoint/')
+# encodernet_VIP = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/notemp/1.a_DemonAttackNoFrameskip-v4_singlegame_full_1CHAN_VIP_ATARI_EXPERT_1CHAN_SPACEDEMO_STANDARD_40.0_0.01_32_0_0.0001_0.pt_PolicyNotLoaded_0.0_20000_2000_notemp/23_10_12_15_22_15/checkpoint/')
+# encodernet_VEP = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/notemp/1.a_DemonAttackNoFrameskip-v4_singlegame_full_1CHAN_VEP_ATARI_EXPERT_1CHAN_SPACEDEMO_STANDARD_10.0_0.1_0.01_32_32_0.0001_0.pt_PolicyNotLoaded_0.0_20000_2000_notemp/23_10_13_18_31_21/checkpoint/')
+
+#demon
 encodernet_e2e = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/notemp/1.a_DemonAttackNoFrameskip-v4_singlegame_full_e2e_PolicyNotLoaded_0.0_20000_2000_notemp/23_10_11_15_10_22/checkpoint/')
-encodernet_random = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/notemp/1.a_DemonAttackNoFrameskip-v4_singlegame_full_random_PolicyNotLoaded_0.0_20000_2000_notemp/23_10_14_19_15_21/checkpoint/')
+encodernet_random = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/notemp/1.a_DemonAttackNoFrameskip-v4_singlegame_full_random_PolicyNotLoaded_0.0_20000_2000_notemp/23_10_17_18_27_30/checkpoint/')
 encodernet_SOM = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/notemp/1.a_DemonAttackNoFrameskip-v4_singlegame_full_1CHAN_SOM_ATARI_EXPERT_1CHAN_SPACEDEMO_STANDARD_150_0.1_32_32_0.0001_0.pt_PolicyNotLoaded_0.0_20000_2000_notemp/23_10_12_14_10_18/checkpoint/')
 encodernet_TCN = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/notemp/1.a_DemonAttackNoFrameskip-v4_singlegame_full_1CHAN_TCN_ATARI_EXPERT_1CHAN_SPACEDEMO_STANDARD_4.0_0.01_32_32_0.0001_0.pt_PolicyNotLoaded_0.0_20000_2000_notemp/23_10_12_11_47_47/checkpoint/')
-encodernet_VIP = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/notemp/1.a_DemonAttackNoFrameskip-v4_singlegame_full_1CHAN_VIP_ATARI_EXPERT_1CHAN_SPACEDEMO_STANDARD_40.0_0.01_32_0_0.0001_0.pt_PolicyNotLoaded_0.0_20000_2000_notemp/23_10_12_15_22_15/checkpoint/')
-encodernet_VEP = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/notemp/1.a_DemonAttackNoFrameskip-v4_singlegame_full_1CHAN_VEP_ATARI_EXPERT_1CHAN_SPACEDEMO_STANDARD_10.0_0.1_0.01_32_32_0.0001_0.pt_PolicyNotLoaded_0.0_20000_2000_notemp/23_10_13_18_31_21/checkpoint/')
+encodernet_VIP = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/notemp/1.a_DemonAttackNoFrameskip-v4_singlegame_full_1CHAN_VIP_ATARI_EXPERT_1CHAN_SPACEDEMO_STANDARD_50.0_15.0_0.01_32_0_0.0001_0.pt_PolicyNotLoaded_0.0_20000_2000_notemp/23_10_16_22_29_43/checkpoint/')
+encodernet_VEP = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/notemp/1.a_DemonAttackNoFrameskip-v4_singlegame_full_1CHAN_VEP_ATARI_EXPERT_1CHAN_SPACEDEMO_STANDARD_1.0_0.1_1.0_same_32_0_0.0001_0.pt_PolicyNotLoaded_0.0_20000_2000_notemp/23_10_19_18_54_18/checkpoint/')
+
+
+# encodernet_e2e = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/notemp/1.a_SpaceInvadersNoFrameskip-v4_singlegame_full_e2e_PolicyNotLoaded_0.0_20000_2000_notemp/23_10_11_15_12_08/checkpoint/')
+# encodernet_random = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/notemp/1.a_SpaceInvadersNoFrameskip-v4_singlegame_full_random_PolicyNotLoaded_0.0_20000_2000_notemp/23_10_17_13_36_39/checkpoint/')
+# encodernet_SOM = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/notemp/1.a_SpaceInvadersNoFrameskip-v4_singlegame_full_1CHAN_SOM_ATARI_EXPERT_1CHAN_SPACEDEMO_STANDARD_150_0.1_32_32_0.0001_0.pt_PolicyNotLoaded_0.0_20000_2000_notemp/23_10_12_14_09_57/checkpoint/')
+# encodernet_TCN = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/notemp/1.a_SpaceInvadersNoFrameskip-v4_singlegame_full_1CHAN_TCN_ATARI_EXPERT_1CHAN_SPACEDEMO_STANDARD_4.0_0.01_32_32_0.0001_0.pt_PolicyNotLoaded_0.0_20000_2000_notemp/23_10_12_11_48_05/checkpoint/')
+# encodernet_VIP = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/notemp/1.a_SpaceInvadersNoFrameskip-v4_singlegame_full_1CHAN_VIP_ATARI_EXPERT_1CHAN_SPACEDEMO_STANDARD_50.0_15.0_0.01_32_0_0.0001_0.pt_PolicyNotLoaded_0.0_20000_2000_notemp/23_10_16_22_29_56/checkpoint/')
+# encodernet_VEP = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/notemp/1.a_SpaceInvadersNoFrameskip-v4_singlegame_full_1CHAN_VEP_ATARI_EXPERT_1CHAN_SPACEDEMO_STANDARD_1.0_0.1_1.0_same_32_0_0.0001_0.pt_PolicyNotLoaded_0.0_20000_2000_notemp/23_10_19_18_53_54/checkpoint/')
+
+
 
 cnn_e2e = encodernet_e2e.model._convs
 cnn_random = encodernet_random.model._convs
