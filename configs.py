@@ -106,9 +106,9 @@ beogym_config = {
         "logdir": os.path.expanduser(args.log)
         },
     "observation_filter":"NoFilter",
-    "num_workers":args.num_workers,
+    "num_workers":args.num_workers-8,
     "rollout_fragment_length" : 1000,
-    "num_envs_per_worker" : args.num_envs,
+    "num_envs_per_worker" : args.num_envs-8,
     'model':{
                 "custom_model": "model",
                 "use_lstm": True,
@@ -116,7 +116,8 @@ beogym_config = {
                 "lstm_use_prev_action" : True,
                 "lstm_use_prev_reward" : True,
                 "vf_share_layers": True,
-                "conv_filters": [[16, 3, 2], [32, 3, 2], [64, 3, 2], [128, 3, 2], [256, 3, 2]],
+                #"conv_filters": [[16, 3, 2], [32, 3, 2], [64, 3, 2], [128, 3, 2], [512, 3, 2]],
+                "conv_filters": [[16, [8, 8], 4], [32, [4, 4], 2], [512, [11, 11], 1]],
                 "conv_activation":'relu',
                 "post_fcnet_hiddens":[],
             },

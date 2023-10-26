@@ -53,12 +53,12 @@ if __name__ == '__main__':
 
     all_dir = sys.argv[1]
     output_dir = sys.argv[2]
-    game_list=[]
+    game_list={}
     with open(all_dir,'r') as f:
         for line in f:
-            game_list.append(line.strip())
+            game_list[line.strip().split(',')[0].replace("'",'')] = line.strip().split(',')[1].replace(' ','')
     data_path = '/lab/kiran/logs/rllib/atari/notemp/'
-    for i in game_list:
+    for name,i in game_list.items():
         game_dir = os.path.join(data_path, i)
         print(game_dir)
         event_files=[]
@@ -82,9 +82,9 @@ if __name__ == '__main__':
                 if q != -1:
                     steps.append(key)
                     values.append(q)
-        data={'step':steps, 'value':values}    
+        data={'Step':steps, 'Reward':values}    
         data = pd.DataFrame(data)
-        ax = sns.lineplot(data=data,x='step', y='value')
+        ax = sns.lineplot(data=data,x='Step', y='Reward',label=name)
         fig = ax.get_figure()
     out = os.path.join(output_dir,f'{".".join(all_dir.split(".")[:-1])}.png')
     # out = 'spaceinvaders.png'

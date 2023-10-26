@@ -12,8 +12,6 @@ import random
 import sys,os,random
 import pandas as pd
 import copy
-from IPython import embed
-
 ModelCatalog.register_custom_model("model", SingleAtariModel)
 
 
@@ -58,7 +56,6 @@ def seed_everything(seed, env):
 #env_name has to be that of policy_model_path
 def eval_adapter(env_name, backbone_model_path, policy_model_path, rounds):
     print(env_name, policy_model_path)
-    assert(env_name in policy_model_path)
     backbone_model = Policy.from_checkpoint(backbone_model_path)
     policy_model = Policy.from_checkpoint(policy_model_path)
     policy_weights = policy_model.get_weights()
@@ -74,54 +71,34 @@ def eval_adapter(env_name, backbone_model_path, policy_model_path, rounds):
     policy_model.set_weights(policy_weights)
     backbone_model.set_weights(backbone_weights)
     #backbone_model.set_weights(backbone_weights_copy)
-    res1=[]
-    res2=[]
+    res=[]
 
     for i in range(rounds):
-        
-        env1 = SingleAtariEnv({'env': env_name, 'full_action_space': False, 'framestack': False})
-        env2 = SingleAtariEnv({'env': env_name, 'full_action_space': False, 'framestack': False})
-        
+        env = SingleAtariEnv({'env': env_name, 'full_action_space': False, 'framestack': False})
         random_generated_int = random.randint(0, 2**31-1)
-        env1 = seed_everything(random_generated_int, env1)
-        obs1 = env1.reset()
-        env1.seed(random_generated_int)
+        env = seed_everything(random_generated_int, env)
+        obs = env.reset()
+        env.seed(random_generated_int)
 
-        total1 = 0.0
-        total2 = 0.0
+        total = 0.0
         for _ in range(4650):
-            action = policy_model.compute_single_action(obs1)[0]
-            obs1, reward, done, _ = env1.step(action)
-            total1 += reward
+            action = policy_model.compute_single_action(obs)[0]
+            obs, reward, done, _ = env.step(action)
+            total += reward
             if done:
                 break
-        res1.append(total1)
+        res.append(total)
         #print("lsjf;lasjlkdfjlk;asjdflk;saj;fdjslak;dff", res1, policy_model_path)
         
-        if backbone_model_path != policy_model_path:
-            random_generated_int = random.randint(0, 2**31-1)
-            env2 = seed_everything(random_generated_int, env2)
-            obs2 = env2.reset()
-            env2.seed(random_generated_int)
-
-            for _ in range(4650):
-                action = backbone_model.compute_single_action(obs2)[0]
-                obs2, reward, done, _ = env2.step(action)
-                total2 += reward
-                if done:
-                    break
-            res2.append(total2)
     
-    
-    if backbone_model_path != policy_model_path:
-        return str(round(mean(res1),1)) + '±' + str(round(stddev(res1),1)) + ' / ' + str(round(mean(res2),1)) + '±' + str(round(stddev(res2),1))
-    else:
-        return str(round(mean(res1),1)) + '±' + str(round(stddev(res1),1))
+    return str(round(mean(res),1)) + '±' + str(round(stddev(res),1))
 
-g1='DemonAttackNoFrameskip-v4'
-g2='SpaceInvadersNoFrameskip-v4'
+g3='CarnivalNoFrameskip-v4'
+g4='AirRaidNoFrameskip-v4'
+g5='NameThisGameNoFrameskip-v4'
+g6='PhoenixNoFrameskip-v4'
 
-from model_checkpoints import *
+from model_checkpts import *
 
 #these models are trained on g1
 #demon
@@ -133,17 +110,25 @@ models2 = {'E2E ':g2_e2e, 'RANDOM ':g2_random, 'SOM ':g2_SOM, 'TCN ':g2_TCN, 'VI
 
 
 res = {}
-numrounds = 15
-#first measure the best performance on each game using end to end training (no transfer)
-res[''] = [eval_adapter(g1, g1_e2e, g1_e2e, numrounds), eval_adapter(g2, g2_e2e, g2_e2e, numrounds)]
+numrounds = 10
 
 
 for key,value in models1.items():
-    g1g2 = eval_adapter(g1, models2[key], value, numrounds)
-    g2g1 = eval_adapter(g2, value, models2[key], numrounds)
-    res[key] = [g1g2, g2g1]
+    g3_g1 = eval_adapter(g3, value, value, numrounds)
+    g3_g2 = eval_adapter(g3, models2[key], models2[key], numrounds)
+    
+    
+    g4_g1 = eval_adapter(g4, value, value, numrounds)
+    g4_g2 = eval_adapter(g4, models2[key], models2[key], numrounds)
+    
+
+    g5_g1 = eval_adapter(g5, value, value, numrounds)
+    g5_g2 = eval_adapter(g5, models2[key], models2[key], numrounds)
+    
+    
+    res[key] = [g3_g1 + ' | ' + g3_g2, g4_g1 + ' | ' + g4_g2, g5_g1 + ' | ' + g5_g2]
 
 df = pd.DataFrame(res).T
-df.columns = [f'{g1}', f' {g2}']
-df.to_csv('policy_evaluation.csv')
+df.columns = [f'{g3}', f' {g4}', f' {g5}']
+df.to_csv('newgame_evaluation.csv')
  

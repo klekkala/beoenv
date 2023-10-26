@@ -23,7 +23,7 @@ class Agent():
         self.reset()
     
     def reset(self):
-        self.agent_pos_curr = self.dh.reset()
+        self.agent_pos_curr,long = self.dh.reset()
         self.agent_pos_prev = self.agent_pos_curr
         # self.curr_image_name = self.dh.image_name(self.agent_pos_curr)
         # print("Image name: ", self.curr_image_name)
@@ -33,7 +33,7 @@ class Agent():
         else:
             self.curr_view = self.dh.get_image_orientation(self.agent_pos_curr, self.curr_camera)
 
-        return self.curr_view
+        return self.curr_view,long
 
         # The behaviour of go_back: go straight back but keep looking at the same angle. Similar to google maps.
 

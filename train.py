@@ -31,7 +31,7 @@ from ray.rllib.policy.sample_batch import SampleBatch
 from ray.rllib.evaluation import Episode, RolloutWorker
 from ray.rllib.algorithms.algorithm_config import AlgorithmConfig
 from models.atarimodels import SingleAtariModel, SharedBackboneAtariModel, SharedBackbonePolicyAtariModel, AtariCNNV2PlusRNNModel
-from models.beogymmodels import SingleBeogymModel, BeogymCNNV2PlusRNNModel, FrozenBackboneModel
+from models.beogymmodels import SingleBeogymModel, BeogymCNNV2PlusRNNModel, FrozenBackboneModel, SingleImageModel
 from ray.rllib.algorithms.ppo import PPOConfig
 from typing import Dict, Tuple
 import gym
@@ -87,7 +87,7 @@ def pick_config_env(str_env):
 def rllib_loop(config, str_logger):
 
     #final modifications in the config
-    if args.temporal == "lstm" or args.temporal == "attention" or args.env_name == "beogym":
+    if args.temporal == "lstm" or args.temporal == "attention":
         args.stop_timesteps = 75000000
 
     print("program running for, ", args.stop_timesteps)
@@ -118,8 +118,8 @@ def rllib_loop(config, str_logger):
     print(config)
 
     #copy the current codebase to the log directory
-    path = Path(args.log + "/" + str_logger)
-    path = Path(args.log + "/" + str_logger + "/beoenv")
+    path = Path(args.log + "/" + args.env_name + "/" + str_logger)
+    path = Path(args.log + "/" + args.env_name + "/" + str_logger + "/beoenv")
     path.mkdir(parents=True, exist_ok=True)
     distutils.dir_util.copy_tree("/lab/kiran/beoenv/", args.log + "/" + str_logger + "/beoenv/")
 
@@ -139,7 +139,7 @@ def rllib_loop(config, str_logger):
 
     
     if args.setting == 'seqgame' and config['env_config']['env'] != configs.all_envs[0]:
-        policy_ckpt = Policy.from_checkpoint(args.log + "/" + str_logger.replace(config['env_config']['env'] + '/', '') + "/checkpoint")
+        policy_ckpt = Policy.from_checkpoint(args.log + "/" + args.env_name + "/" + str_logger.replace(config['env_config']['env'] + '/', '') + "/checkpoint")
         plc.set_weights(policy_ckpt.get_weights())
 
     #if args.policy != None:
@@ -152,7 +152,7 @@ def rllib_loop(config, str_logger):
     #load the backbone
     if args.backbone != 'e2e' and 'e2e' in args.backbone:
         embed()
-        load_ckpt = Policy.from_checkpoint(args.log + "/" + args.temporal + "/" + args.backbone + "/checkpoint").get_weights()
+        load_ckpt = Policy.from_checkpoint(args.log + "/" + args.env_name + "/" + args.temporal + "/" + args.backbone + "/checkpoint").get_weights()
         embed()
         orig_wts = plc.get_weights()
         chng_wts = {}
@@ -173,9 +173,9 @@ def rllib_loop(config, str_logger):
         # stop training of the target train steps or reward are reached
         #MAKE SURE YOU KEEP SAVING CHECKPOINTS
         if result["timesteps_total"] >= args.stop_timesteps:
-            algo.save(checkpoint_dir=args.log + "/" + str_logger.replace(config['env_config']['env'] + '/', '') + "/checkpoint/wholealgo")
+            algo.save(checkpoint_dir=args.log + "/" + args.env_name + "/" + str_logger.replace(config['env_config']['env'] + '/', '') + "/checkpoint/wholealgo")
             policy = algo.get_policy()
-            policy.export_checkpoint(args.log + "/" + str_logger.replace(config['env_config']['env'] + '/', '') + "/checkpoint")
+            policy.export_checkpoint(args.log + "/" + args.env_name + "/" + str_logger.replace(config['env_config']['env'] + '/', '') + "/checkpoint")
             break
     
     algo.stop()
@@ -218,7 +218,7 @@ def single_train(str_logger, backbone='e2e', policy=None):
                     "env_config": env_config,
                     "logger_config" : {
                         "type": UnifiedLogger,
-                        "logdir": os.path.expanduser(args.log + '/' + str_logger)
+                        "logdir": os.path.expanduser(args.log + '/' + args.env_name + '/' + str_logger)
                     }
                 }
             )
@@ -269,7 +269,7 @@ def beogym_single_train(str_logger, backbone='e2e', policy=None):
     """
     #else:
     print("1chanlstm********************")
-    ModelCatalog.register_custom_model("fro_model", FrozenBackboneModel)
+    ModelCatalog.register_custom_model("Single", SingleImageModel)
     #do all the config overwrites here
     use_config.update(
                 {
@@ -277,19 +277,18 @@ def beogym_single_train(str_logger, backbone='e2e', policy=None):
                     "env_config": env_config,
                     "logger_config" : {
                         "type": UnifiedLogger,
-                        "logdir": os.path.expanduser(args.log + '/' + str_logger)
+                        "logdir": os.path.expanduser(args.log + '/' + args.env_name + '/' + str_logger)
                     },
                     'model':{
-                        "custom_model": "fro_model",
-                        #  "custom_model_config" : {"backbone": args.backbone, "backbone_path": args.ckpt + args.env_name + "/" + args.backbone, "train_backbone": args.train_backbone, 'temporal': args.temporal},
-                        # "framestack": True,
+                        "custom_model": "Single",
+                        "custom_model_config" : {"backbone": args.backbone, "backbone_path": args.ckpt + args.env_name + "/" + args.backbone, "train_backbone": args.train_backbone, 'temporal': args.temporal, 'conv_filters': [[16, [8, 8], 4], [32, [4, 4], 2], [512, [11, 11], 1]]},
+                        "framestack": False,
                         "use_lstm": False,
                         "vf_share_layers": True,
-                        "conv_filters": [[16, 3, 2], [32, 3, 2], [64, 3, 2], [128, 3, 2], [256, 3, 2]],
+                        "conv_filters": [[16, [8, 8], 4], [32, [4, 4], 2], [512, [11, 11], 1]],
                     },
                 }
             )
-
 
     #start the training loop
     rllib_loop(use_config, str_logger)
@@ -328,7 +327,7 @@ def seq_train(str_logger):
              "env_config" : {'env': eachenv, "full_action_space": False, 'framestack': args.temporal == '4stack'},
              "logger_config" : {
                 "type": UnifiedLogger,
-                "logdir": os.path.expanduser(args.log + '/' + str_logger + "/" + eachenv + "/")
+                "logdir": os.path.expanduser(args.log + '/' + args.env_name + '/' + str_logger + "/" + eachenv + "/")
                 }
             }
         )
@@ -390,7 +389,7 @@ def train_multienv(str_logger):
                     "env_config": env_config,
                     "logger_config" : {
                         "type": UnifiedLogger,
-                        "logdir": os.path.expanduser(args.log + '/' + str_logger)
+                        "logdir": os.path.expanduser(args.log + '/' + args.env_name + '/' + str_logger)
                     },
                     "multiagent": {
                         "policies" : policies,
@@ -436,7 +435,7 @@ def beogym_single_train(str_logger, backbone='e2e', policy=None):
                     'env_config':env_config,
                     "logger_config" : {
                         "type": UnifiedLogger,
-                        "logdir": os.path.expanduser(args.log + '/' + str_logger)
+                        "logdir": os.path.expanduser(args.log + '/' + args.env_name + '/' + str_logger)
                     },
                     # "model": {"custom_mod52el" : "model",
                     #           "vf_share_layers": True
@@ -499,7 +498,7 @@ def beogym_train_multienv(str_logger):
                     "env_config" : {'envs': configs.all_envs, 'data_path':args.data_path},
                     "logger_config" : {
                         "type": UnifiedLogger,
-                        "logdir": os.path.expanduser(args.log + '/' + str_logger)
+                        "logdir": os.path.expanduser(args.log + '/' + args.env_name + '/' + str_logger)
                     },
                     "multiagent": {
                         "policies" : policies,

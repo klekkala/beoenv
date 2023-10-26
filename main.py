@@ -40,8 +40,8 @@ if __name__ == "__main__":
     ray.init(local_mode=args.local_mode)
 
     #if the env_name is beogym.. then temporal mode is always lstm
-    if args.env_name == "beogym":
-        args.temporal = "lstm"
+    #if args.env_name == "beogym":
+    #    args.temporal = "lstm"
     
     #log directory
     suffix = datetime.datetime.now().strftime("%y_%m_%d_%H_%M_%S")

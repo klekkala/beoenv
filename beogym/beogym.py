@@ -34,9 +34,10 @@ class BeoGym(gym.Env):
             print("No image mode")
             self.observation_space = gym.spaces.Box(low=-1, high=1, shape=(6,), dtype=np.float32)
         else:
-            self.observation_space = gym.spaces.Dict(
-                {"obs": spaces.Box(low=0, high=255, shape=(84, 84, 4), dtype=np.uint8),
-                 "aux": spaces.Box(low=-1.0, high=1.0, shape=(2,), dtype=np.float32)})
+            self.observation_space = spaces.Box(low=0, high=255, shape=(84, 84, 3), dtype=np.uint8)
+            # self.observation_space = gym.spaces.Dict(
+            #     {"obs": spaces.Box(low=0, high=255, shape=(4, 84, 84, 3), dtype=np.uint8),
+            #      "aux": spaces.Box(low=-1.0, high=1.0, shape=(4, 1), dtype=np.float32)})
 
         self.seed(1)
 
@@ -58,6 +59,7 @@ class BeoGym(gym.Env):
         self.last_action = -1
         self.this_action = -1
         self.frames=[]
+        self.aux=[]
         # while True:
         #     self.courier_goal = self.dh.sample_location()
         #     dis=gt.shortest_distance(self.dh.G, source=self.dh.G.vertex(self.dh.Gdict[self.agent.agent_pos_curr]), target=self.dh.G.vertex(self.dh.Gdict[self.courier_goal]), weights=self.dh.G.ep['weight'])
@@ -90,18 +92,21 @@ class BeoGym(gym.Env):
         self.turn_count=0
         self.out_count=0
         self.right=0
-        self.agent.reset()
+        _,self.long = self.agent.reset()
         
         self.minD=300
-        self.maxD=99999
+        self.minD=900
+        self.maxD=1200
+        # self.maxD=99999
         #short300-500
-        while True:
-            self.courier_goal = self.dh.sample_location()
-            dis=gt.shortest_distance(self.dh.G, source=self.dh.G.vertex(self.dh.Gdict[self.agent.agent_pos_curr]), target=self.dh.G.vertex(self.dh.Gdict[self.courier_goal]), weights=self.dh.G.ep['weight'])
-            if dis>=self.minD and dis<=self.maxD:
-                self.long=dis
-                break
-
+        # while True:
+        #     self.courier_goal = self.dh.sample_location()
+        #     dis=gt.shortest_distance(self.dh.G, source=self.dh.G.vertex(self.dh.Gdict[self.agent.agent_pos_curr]), target=self.dh.G.vertex(self.dh.Gdict[self.courier_goal]), weights=self.dh.G.ep['weight'])
+        #     if dis>=self.minD and dis<=self.maxD:
+        #         print(self.courier_goal)
+        #         self.long=dis
+        #         break
+        self.courier_goal = (-45.04695452668559, -50.39745826654991)
         self.shortest=99999
         
 
@@ -130,9 +135,9 @@ class BeoGym(gym.Env):
         # aux = [(self.agent.agent_pos_curr[1] + 100) / 200, (self.agent.agent_pos_curr[0] + 100) / 200,self.agent.curr_angle / 360, (self.courier_goal[1] + 100) / 200,(self.courier_goal[0] + 100) / 200]
         # aux+=temp
 
-        aux = [(self.courier_goal[1] + 100) / 200,(self.courier_goal[0] + 100) / 200]
-        #self.agent.dis_to_goal = gt.shortest_distance(self.dh.G, source=self.dh.G.vertex(self.dh.Gdict[self.agent.agent_pos_curr]), target=self.dh.G.vertex(self.dh.Gdict[self.courier_goal]), weights=self.dh.G.ep['weight'])
-        
+        self.agent.dis_to_goal = gt.shortest_distance(self.dh.G, source=self.dh.G.vertex(self.dh.Gdict[self.agent.agent_pos_curr]), target=self.dh.G.vertex(self.dh.Gdict[self.courier_goal]), weights=self.dh.G.ep['weight'])
+        aux = [(self.courier_goal[1] + 100) / 200,(self.courier_goal[0] + 100) / 200, self.agent.dis_to_goal/5000]
+        self.aux = [[self.agent.dis_to_goal/5000] for i in range(4)]
         
         if self.no_image:
             #self.agent.reset()
@@ -143,16 +148,13 @@ class BeoGym(gym.Env):
             # self.agent.past_view = np.concatenate((self.agent.past_view, np.expand_dims(gray_image, axis=-1)), axis=-1)
             # return {'obs': self.agent.past_view, 'aux': np.array(aux)}
             p_view = self.agent.curr_view[0:208,104:312]
-            # p_view = cv2.resize(self.agent.curr_view, (84, 84))
             p_view = cv2.resize(p_view, (84, 84))
-            gray_image = cv2.cvtColor(p_view, cv2.COLOR_RGB2GRAY)
-            # self.agent.past_view = np.zeros((gray_image.shape[0], gray_image.shape[1], 4), dtype=np.float32)
-            # self.agent.past_view = np.concatenate((self.agent.past_view, np.expand_dims(gray_image, axis=-1)), axis=-1)
-            # return {'obs': self.agent.past_view, 'aux': np.array(aux)}
-            self.frames = np.repeat(gray_image[:, :, np.newaxis], 4, axis=2)
-            return {'obs': self.frames, 'aux': np.array(aux)}
-
-            return {'obs': p_view, 'aux': np.array(aux)}
+            return p_view
+            # gray_image = cv2.cvtColor(p_view, cv2.COLOR_RGB2GRAY)
+            # self.frames = np.repeat(gray_image[:, :, np.newaxis], 4, axis=2)
+            # return {'obs': self.frames, 'aux': np.array(aux)}
+            self.frames = np.repeat(p_view[np.newaxis, :, :, :], 4, axis=0)
+            return {'obs': self.frames, 'aux': np.array(self.aux)}
 
     def step(self, action):
         truncated = False
@@ -209,7 +211,9 @@ class BeoGym(gym.Env):
         # temp = [self.dh.fix_angle(self.dh.get_angle(self.agent.agent_pos_curr, self.courier_goal))/360]
         # aux = [(self.agent.agent_pos_curr[1] + 100) / 200, (self.agent.agent_pos_curr[0] + 100) / 200,self.agent.curr_angle / 360, (self.courier_goal[1] + 100) / 200,(self.courier_goal[0] + 100) / 200]
         # aux+=temp
-        aux = [(self.courier_goal[1] + 100) / 200,(self.courier_goal[0] + 100) / 200]
+        # self.agent.dis_to_goal = gt.shortest_distance(self.dh.G, source=self.dh.G.vertex(self.dh.Gdict[self.agent.agent_pos_curr]), target=self.dh.G.vertex(self.dh.Gdict[self.courier_goal]), weights=self.dh.G.ep['weight'])
+        aux = [(self.courier_goal[1] + 100) / 200,(self.courier_goal[0] + 100) / 200, self.agent.dis_to_goal/5000]
+        # aux = [(self.courier_goal[1] + 100) / 200,(self.courier_goal[0] + 100) / 200]
         if (self.curr_step >= self.max_steps):
             truncated = True
             done = True
@@ -223,11 +227,16 @@ class BeoGym(gym.Env):
             # #return {'obs': self.agent.curr_view, 'aux': np.array(aux)}, reward, terminated,truncated, info
             p_view = self.agent.curr_view[0:208,104:312]
             p_view = cv2.resize(p_view, (84, 84))
-            gray_image = cv2.cvtColor(p_view, cv2.COLOR_RGB2GRAY)
+            return p_view,reward, done, info
+            # gray_image = cv2.cvtColor(p_view, cv2.COLOR_RGB2GRAY)
+            # self.frames[:-1] = self.frames[1:]
+            # self.frames[..., -1] = p_view
             self.frames[:-1] = self.frames[1:]
-            self.frames[..., -1] = gray_image
-            return {'obs': self.frames, 'aux': np.array(aux)}, reward, done, info
-            return {'obs': p_view, 'aux': np.array(aux)}, reward, done, info
+            self.frames[-1] = p_view
+            self.aux[:-1] = self.aux[1:]
+            self.aux[-1] = np.array([self.agent.dis_to_goal/5000])
+            return {'obs': self.frames, 'aux': np.array(self.aux)}, reward, done, info
+            # return {'obs': p_view, 'aux': np.array(aux)}, reward, done, info
 
     def render(self, mode='human', steps=100):
 
@@ -405,23 +414,26 @@ class BeoGym(gym.Env):
         #distance_to_goal = 1
         distance_to_goal = gt.shortest_distance(self.dh.G, source=self.dh.G.vertex(self.dh.Gdict[self.agent.agent_pos_curr]), target=self.dh.G.vertex(self.dh.Gdict[self.courier_goal]), weights=self.dh.G.ep['weight'])
         # Does not give reward if the agent visited old locations:
-        
+        self.agent.dis_to_goal = distance_to_goal
         if self.agent.agent_pos_curr in self.dh.visited_locations:
             # self.agent.dis_to_goal = distance_to_goal
             return reward, found_goal
-        #if self.agent.agent_pos_curr == self.courier_goal:
+        # if self.agent.agent_pos_curr == self.courier_goal:
         if distance_to_goal < self.min_radius_meters:
-            return (1000-self.curr_step)/5, True
-            self.shortest=999999
             reward = self.long
-            self.minD+=100
-            self.maxD+=100
-            while True:
-                self.courier_goal = self.dh.sample_location()
-                dis=gt.shortest_distance(self.dh.G, source=self.dh.G.vertex(self.dh.Gdict[self.agent.agent_pos_curr]), target=self.dh.G.vertex(self.dh.Gdict[self.courier_goal]), weights=self.dh.G.ep['weight'])
-                if dis>=self.minD and dis<=self.maxD:
-                    self.long=dis
-                    break
+            _, self.long = self.agent.reset()
+            return 1,False
+        #     return (1000-self.curr_step)/5, True
+        #     self.shortest=999999
+        #     reward = self.long
+        #     self.minD+=100
+        #     self.maxD+=100
+        #     while True:
+        #         self.courier_goal = self.dh.sample_location()
+        #         dis=gt.shortest_distance(self.dh.G, source=self.dh.G.vertex(self.dh.Gdict[self.agent.agent_pos_curr]), target=self.dh.G.vertex(self.dh.Gdict[self.courier_goal]), weights=self.dh.G.ep['weight'])
+        #         if dis>=self.minD and dis<=self.maxD:
+        #             self.long=dis
+        #             break
 
             self.dh.visited_locations=set()
 
@@ -431,7 +443,7 @@ class BeoGym(gym.Env):
 
             if distance_to_goal<self.shortest:
                 # reward=max(0,min(1,(200-distance_to_goal)/100))*self.long
-                reward=1
+                reward=0
                 self.shortest=distance_to_goal
 
 

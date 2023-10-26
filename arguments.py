@@ -24,7 +24,7 @@ def get_args():
         "--machine", type=str, default="", help="machine to be training"
     )
     parser.add_argument(
-        "--log", type=str, default="/lab/kiran/logs/rllib/atari", help="config file for resources"
+        "--log", type=str, default="/lab/kiran/logs/rllib", help="config file for resources"
     )
 
     parser.add_argument(

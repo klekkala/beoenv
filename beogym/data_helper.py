@@ -401,17 +401,17 @@ class dataHelper():
             print(self.route)
             
         if self.city=='Wall_Street':    
-            return (-61.63857417592947, -64.93267436677775)
+            return sample_source(-61.63857417592947, -64.93267436677775)
         elif self.city=='Union_Square':
-            return (-45.04695452668559, -50.39745826654991)
+            return self.sample_source((-45.04695452668559, -50.39745826654991))
         elif self.city=='Hudson_River':
-            return (93.1395291367042, -0.7047850456277587)
+            return sample_source(93.1395291367042, -0.7047850456277587)
         elif self.city == 'CMU':
-            return (-26.740129338424083, 93.62126227277517)
+            return sample_source(-26.740129338424083, 93.62126227277517)
         elif self.city == 'Allegheny':
-            return (95.86598041695194, -64.54825006689578)
+            return sample_source(95.86598041695194, -64.54825006689578)
         elif self.city == 'South_Shore':
-            return (-45.15996521572513, -55.452800619759564)
+            return sample_source(-45.15996521572513, -55.452800619759564)
 
         # return (-61.63857417592947, -64.93267436677775)
         # random_loc = random.choice(list(self.Gdict.keys()))
@@ -424,6 +424,15 @@ class dataHelper():
         #return (-7.173385138661828, -18.22405017381506)
         # random start
         # return random.choice(self.end_points)
+
+    def sample_source(self,goal):
+        while True:
+            temp = self.sample_location()
+            dis=gt.shortest_distance(self.G, source=self.G.vertex(self.Gdict[temp]), target=self.G.vertex(self.Gdict[goal]), weights=self.G.ep['weight'])
+            if dis>=200 and dis<=2000:
+                long=dis
+                break
+        return temp,long
 
     def sample_location(self):
 

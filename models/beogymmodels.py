@@ -4,7 +4,7 @@
 
 import functools
 from typing import Optional
-
+import clip
 import numpy as np
 import tree
 from gym.spaces import Box, Dict, Discrete, MultiDiscrete, Tuple
@@ -15,7 +15,7 @@ from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
 from ray.rllib.models.base_model import RecurrentModel, Model, ModelIO
 from ray.rllib.models.modelv2 import ModelV2
 from ray.rllib.models.torch.misc import SlimFC
-
+from PIL import Image
 from IPython import embed
 from ray.rllib.models.utils import get_activation_fn
 from ray.rllib.policy.sample_batch import SampleBatch
@@ -30,6 +30,8 @@ from typing import Dict, List, Tuple
 from ray.rllib.utils.typing import ModelConfigDict, TensorType
 from ray.rllib.policy.rnn_sequencing import add_time_dimension
 import time
+from ray.rllib.models.torch.visionnet import VisionNetwork
+
 from ray.rllib.models.modelv2 import ModelV2
 from ray.rllib.models.torch.misc import (
     normc_initializer,
@@ -95,7 +97,7 @@ class FrozenBackboneModel(ComplexInputNetwork):
                 for param in self.cnns[1].parameters():
                     param.requires_grad = False
                 cnn_out, _ = self.cnns[i](SampleBatch({SampleBatch.OBS: component}))
-                outs.append(torch.randn_like(cnn_out))
+                outs.append(cnn_out)
             elif i in self.one_hot:
                 if component.dtype in [
                     torch.int8,
@@ -455,3 +457,83 @@ class LSTM2Network(TorchRNN, nn.Module):
     def value_function(self):
         assert self._features is not None, "must call forward() first"
         return torch.reshape(self.value_branch(self._features), [-1])
+
+
+class SingleImageModel(VisionNetwork):
+
+    def __init__(
+        self, observation_space, action_space, num_outputs, model_config, name
+    ):
+        super().__init__(observation_space, action_space, num_outputs, model_config, name)
+
+    
+        if  model_config['custom_model_config']['backbone'] == 'clip':
+            #put the clip code here
+            #self._convs = clipmodel
+            self._model = 'clip'
+            self._convs, self._pre = clip.load('RN50',device = 'cuda')
+            print('its clip')
+        
+        else:
+            self._model = 'not'
+            chan_in = 3
+            activation = 'relu'
+        
+            self._convs = TEncoder(channel_in=chan_in, ch=32, z=512, activation=activation)
+
+            #embed()
+            #model_config['custom_model_config']['train_backbone']=True
+            
+            if not model_config['custom_model_config']['train_backbone']:
+                print("freezing encoder layers")
+                #freeze the entire backbone
+                self._convs.eval()
+                for param in self._convs.parameters():
+                    param.requires_grad = False
+            else:
+                print('not freezing')
+
+    @override(TorchModelV2)
+    def forward(
+        self,
+        input_dict: Dict[str, TensorType],
+        state: List[TensorType],
+        seq_lens: TensorType,
+    ) -> (TensorType, List[TensorType]):
+        self._features = input_dict["obs"].float()
+        # Permuate b/c data comes in as [B, dim, dim, channels]:
+        self._features = self._features.permute(0, 3, 1, 2)
+        if self._model == 'clip':
+            # for i in range(self._features.size(0)):
+            #     print(self._pre(Image.fromarray(np.zeros((84,84,3)))))
+            #     self._features[i] = self._pre(Image.fromarray(self._features[i].cpu().numpy())).to('cuda')
+            # self._features = self._pre(self._features.cpu().numpy())
+            conv_out = self._convs.encode_image(self._features)
+        else:
+            conv_out = self._convs(self._features)
+        # Store features to save forward pass when getting value_function out.
+        if not self._value_branch_separate:
+            self._features = conv_out
+
+        if not self.last_layer_is_flattened:
+            if self._logits:
+                conv_out = self._logits(conv_out)
+            if len(conv_out.shape) == 4:
+                if conv_out.shape[2] != 1 or conv_out.shape[3] != 1:
+                    raise ValueError(
+                        "Given `conv_filters` ({}) do not result in a [B, {} "
+                        "(`num_outputs`), 1, 1] shape (but in {})! Please "
+                        "adjust your Conv2D stack such that the last 2 dims "
+                        "are both 1.".format(
+                            self.model_config["conv_filters"],
+                            self.num_outputs,
+                            list(conv_out.shape),
+                        )
+                    )
+                logits = conv_out.squeeze(3)
+                logits = logits.squeeze(2)
+            else:
+                logits = conv_out
+            return logits, state
+        else:
+            return conv_out, state
