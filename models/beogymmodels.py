@@ -4,7 +4,6 @@
 
 import functools
 from typing import Optional
-import clip
 import numpy as np
 import tree
 from gym.spaces import Box, Dict, Discrete, MultiDiscrete, Tuple
@@ -24,21 +23,23 @@ from ray.rllib.utils.framework import try_import_torch
 from vaemodel import Encoder
 from ray.rllib.models.torch.complex_input_net import ComplexInputNetwork
 from ray.rllib.policy.view_requirement import ViewRequirement
-
-from atari_vae import Encoder, TEncoder
+from ray.rllib.utils.spaces.space_utils import flatten_space
+from ray.rllib.utils.torch_utils import one_hot
+from atari_vae import Encoder, TEncoder, TBeoEncoder
 from typing import Dict, List, Tuple
 from ray.rllib.utils.typing import ModelConfigDict, TensorType
 from ray.rllib.policy.rnn_sequencing import add_time_dimension
 import time
 from ray.rllib.models.torch.visionnet import VisionNetwork
-
+from ray.rllib.models.catalog import ModelCatalog
 from ray.rllib.models.modelv2 import ModelV2
 from ray.rllib.models.torch.misc import (
-    normc_initializer,
+    normc_initializer as torch_normc_initializer,
     same_padding,
     SlimConv2d,
     SlimFC,
 )
+
 from ray.rllib.models.utils import get_activation_fn, get_filter_config
 from ray.rllib.models.torch.recurrent_net import RecurrentNetwork as TorchRNN
 
@@ -80,7 +81,7 @@ class FrozenBackboneModel(ComplexInputNetwork):
             param.requires_grad = False
         for name, param in self.cnns[1].named_parameters():
             param.requires_grad = False
-                
+
 
     @override(ModelV2)
     def forward(self, input_dict, state, seq_lens):
@@ -94,10 +95,9 @@ class FrozenBackboneModel(ComplexInputNetwork):
         outs = []
         for i, component in enumerate(tree.flatten(orig_obs)):
             if i in self.cnns:
-                for param in self.cnns[1].parameters():
-                    param.requires_grad = False
                 cnn_out, _ = self.cnns[i](SampleBatch({SampleBatch.OBS: component}))
                 outs.append(cnn_out)
+
             elif i in self.one_hot:
                 if component.dtype in [
                     torch.int8,
@@ -125,6 +125,7 @@ class FrozenBackboneModel(ComplexInputNetwork):
                         }
                     )
                 )
+
                 outs.append(nn_out)
 
         # Concat all outputs and the non-image inputs.
@@ -144,6 +145,209 @@ class FrozenBackboneModel(ComplexInputNetwork):
 #class SharedBackboneAtariModel(ComplexInputNetwork):
 #        def __init__(self, observation_space, action_space, num_outputs, model_config, name):
 #            super().__init__(observation_space, action_space, num_outputs, model_config, name)
+
+
+
+
+class ComplexNet(TorchModelV2, nn.Module):
+
+    def __init__(self, obs_space, action_space, num_outputs, model_config, name):
+        self.original_space = (
+            obs_space.original_space
+            if hasattr(obs_space, "original_space")
+            else obs_space
+        )
+
+        self.processed_obs_space = (
+            self.original_space
+            if model_config.get("_disable_preprocessor_api")
+            else obs_space
+        )
+
+        nn.Module.__init__(self)
+        TorchModelV2.__init__(
+            self, self.original_space, action_space, num_outputs, model_config, name
+        )
+
+        self.flattened_input_space = flatten_space(self.original_space)
+
+        # Atari type CNNs or IMPALA type CNNs (with residual layers)?
+        # self.cnn_type = self.model_config["custom_model_config"].get(
+        #     "conv_type", "atari")
+
+        # Build the CNN(s) given obs_space's image components.
+        self.cnns = {}
+        self.one_hot = {}
+        self.flatten_dims = {}
+        self.flatten = {}
+        concat_size = 0
+        for i, component in enumerate(self.flattened_input_space):
+            # Image space.
+            if len(component.shape) == 3:
+
+                config = {
+                    "conv_filters": model_config["conv_filters"]
+                    if "conv_filters" in model_config
+                    else get_filter_config(component.shape),
+                    "conv_activation": model_config.get("conv_activation"),
+                    "post_fcnet_hiddens": [],
+                    "vf_share_layers": True,
+                    "conv_filters": [[16, [8, 8], 4], [32, [4, 4], 2], [512, [11, 11], 1]],
+                }
+
+                # if self.cnn_type == "atari":
+                self.cnns[i] = ModelCatalog.get_model_v2(
+                    component,
+                    action_space,
+                    num_outputs=None,
+                    model_config=config,
+                    framework="torch",
+                    name="cnn_{}".format(i),
+                )
+
+                concat_size += self.cnns[i].num_outputs
+                self.add_module("cnn_{}".format(i), self.cnns[i])
+            # Discrete|MultiDiscrete inputs -> One-hot encode.
+            elif isinstance(component, (Discrete, MultiDiscrete)):
+                continue
+            # Everything else (1D Box).
+            else:
+                concat_size+=component.shape[0]
+                continue
+        
+        # Optional post-concat FC-stack.
+        # post_fc_stack_config = {
+        #     "fcnet_hiddens": model_config.get("post_fcnet_hiddens", []),
+        #     "fcnet_activation": model_config.get("post_fcnet_activation", "relu"),
+        # }
+        # self.post_fc_stack = ModelCatalog.get_model_v2(
+        #     Box(float("-inf"), float("inf"), shape=(concat_size,), dtype=np.float32),
+        #     self.action_space,
+        #     None,
+        #     post_fc_stack_config,
+        #     framework="torch",
+        #     name="post_fc_stack",
+        # )
+
+        # Actions and value heads.
+        self.logits_layer = None
+        self.value_layer = None
+        self._value_out = None
+
+        if num_outputs:
+            # Action-distribution head.
+            self.final = SlimFC(
+                in_size=concat_size,
+                out_size=512,
+                activation_fn=None,
+                initializer=torch_normc_initializer(0.01),
+            )
+            self.logits_layer = SlimFC(
+                in_size=512,
+                out_size=num_outputs,
+                activation_fn=None,
+                initializer=torch_normc_initializer(0.01),
+            )
+            # Create the value branch model.
+            self.value_layer = SlimFC(
+                in_size=512,
+                out_size=1,
+                activation_fn=None,
+                initializer=torch_normc_initializer(0.01),
+            )
+        else:
+            self.num_outputs = concat_size
+
+        if not model_config['custom_model_config']['train_backbone']:
+            print("freezing encoder layers")
+                #freeze the entire backbone
+            self.cnns[1].eval()
+            for param in self.cnns[1].parameters():
+                param.requires_grad = False
+            for name, param in self.cnns[1].named_parameters():
+                param.requires_grad = False
+            self.final.eval()
+            for param in self.final.parameters():
+                param.requires_grad = False
+        else:
+            print('not freezing')
+        
+        self.encoder = TBeoEncoder(channel_in=3, ch=32, z=512)
+
+        if "e2e" not in model_config['custom_model_config']['backbone_path'] and "random" not in model_config['custom_model_config']['backbone_path']:
+            print(model_config['custom_model_config']['backbone_path'])
+            print("loading model weights")
+            checkpoint = torch.load(model_config['custom_model_config']['backbone_path'], map_location="cpu")
+            self.encoder.load_state_dict(checkpoint['model_state_dict'])
+
+
+    @override(ModelV2)
+    def forward(self, input_dict, state, seq_lens):
+        if self.encoder is None:
+            if SampleBatch.OBS in input_dict and "obs_flat" in input_dict:
+                orig_obs = input_dict[SampleBatch.OBS]
+            else:
+                orig_obs = restore_original_dimensions(
+                    input_dict[SampleBatch.OBS], self.processed_obs_space, tensorlib="torch"
+                )
+            # Push observations through the different components
+            # (CNNs, one-hot + FC, etc..).
+            outs = []
+            for i, component in enumerate(tree.flatten(orig_obs)):
+                if i in self.cnns:
+                    cnn_out, _ = self.cnns[i](SampleBatch({SampleBatch.OBS: component}))
+                    outs.append(cnn_out)
+                elif i in self.one_hot:
+                    if component.dtype in [
+                        torch.int8,
+                        torch.int16,
+                        torch.int32,
+                        torch.int64,
+                        torch.uint8,
+                    ]:
+                        one_hot_in = {
+                            SampleBatch.OBS: one_hot(
+                                component, self.flattened_input_space[i]
+                            )
+                        }
+                    else:
+                        one_hot_in = {SampleBatch.OBS: component}
+                    one_hot_out, _ = self.one_hot[i](SampleBatch(one_hot_in))
+                    outs.append(one_hot_out)
+                else:
+                    nn_out = component
+                    # nn_out, _ = self.flatten[i](
+                    #     SampleBatch(
+                    #         {
+                    #             SampleBatch.OBS: torch.reshape(
+                    #                 component, [-1, self.flatten_dims[i]]
+                    #             )
+                    #         }
+                    #     )
+                    # )
+                    outs.append(nn_out)
+
+            # Concat all outputs and the non-image inputs.
+            
+            out = torch.cat(outs, dim=1)
+            # Push through (optional) FC-stack (this may be an empty stack).
+            out = self.final(out)
+        else:
+            out = self.encoder(input_dict['obs']['obs'], input_dict['obs']['aux'])
+
+        # No logits/value branches.
+        if self.logits_layer is None:
+            return out, []
+
+        # Logits- and value branches.
+        logits, values = self.logits_layer(out), self.value_layer(out)
+        self._value_out = torch.reshape(values, [-1])
+        return logits, []
+
+    @override(ModelV2)
+    def value_function(self):
+        return self._value_out
+
 
 
 
@@ -508,6 +712,7 @@ class SingleImageModel(VisionNetwork):
             #     print(self._pre(Image.fromarray(np.zeros((84,84,3)))))
             #     self._features[i] = self._pre(Image.fromarray(self._features[i].cpu().numpy())).to('cuda')
             # self._features = self._pre(self._features.cpu().numpy())
+            print(self._features)
             conv_out = self._convs.encode_image(self._features)
         else:
             conv_out = self._convs(self._features)

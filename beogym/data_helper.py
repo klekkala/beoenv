@@ -3,7 +3,7 @@ import pickle
 import time
 
 import shutil
-
+import json
 #import Equirec2Perspec as E2P
 import beogym.Equirec2Perspec_cpu as E2P
 import pandas as pd
@@ -25,10 +25,10 @@ import beogym.config as app_config
 
 new_min = -100
 new_max = 100
-lat_min = 40.701149
-lat_max = 40.787206
-long_min = -74.018179
-long_max = -73.947363
+lat_min = 40.707091
+lat_max = 40.764838
+long_min = -74.005022
+long_max = -73.976614
 
 coord_to_sect = {}
 scaled_coord_to_coord = {}
@@ -322,7 +322,40 @@ class dataHelper():
             self.G = gt.load_graph("beogym/pits.gt")
             self.Gdict = pickle.load(open('beogym/pitsgraph.pkl', 'rb'))
             self.Greversed={value: key for key, value in self.Gdict.items()}
-
+        elif 'navigation' in self.city:
+            self.G = gt.load_graph("beogym/tcd.gt")
+            self.Gdict = pickle.load(open('beogym/tcdgraph.pkl', 'rb'))
+            self.Greversed={value: key for key, value in self.Gdict.items()}
+            task = self.city.replace('navigation','')
+            with open ('skillset1.json', 'r') as f:
+                navi_data = f.read().strip().split('\n')
+                self.task = json.loads(navi_data[int(task)])
+            img2pos = pd.read_csv('./manhattan_touchdown_metadata_nodes.tsv', delimiter='\t')
+            self.navi_routes=[]
+            for point in self.task['route_panoids']:
+                info = img2pos[img2pos['pano_id'] == point]
+                self.navi_routes.append((self.new_lat_scale(info['coords.lat'].values[0]), self.new_long_scale(info['coords.lng'].values[0])))
+            trun=-1
+            for idx,pos in enumerate(self.navi_routes):
+                if idx==0:
+                    continue
+                if len(self.find_adjacent(pos)) >= 3:
+                    trun=idx+1
+                    break
+            if trun==-1:
+                raise Exception('this task has no intersectin')
+            self.navi_routes = self.navi_routes[:trun]
+            if self.task['start_heading']!='':
+                self.pre_deg = float(self.task['start_heading'])
+            else:
+                self.pre_deg = random.randint(0,359)
+            if self.task['end_heading']!='':
+                self.post_deg = float(self.task['end_heading'])
+            else:
+                self.post_deg = random.randint(0,359)
+            if len(self.navi_routes)<=1:
+                raise Exception('No task')
+                    
 
         depth=0
         vertices=set()
@@ -370,6 +403,9 @@ class dataHelper():
             self.Gdict = Gdict
             self.Greversed=Greversed
         print(self.G)
+        # self.random_source=[]
+        # for i in range(4):
+        #     self.random_source.append(self.sample_source((-21.75919854376224, -22.524020509970285))[0])
         plt.savefig("filename5.png")
 
 
@@ -385,7 +421,7 @@ class dataHelper():
         if action == "next":
             return [self.Greversed[i] for i in self.G.vertex(self.Gdict[pos]).all_neighbors()]  # Return list of keys of nodes adjacent to node with key pos.
 
-    def reset(self):
+    def reset(self,pos=None):
         self.visited_locations=set()
         self.path=[]
         self.route_loc=0
@@ -399,19 +435,27 @@ class dataHelper():
                     self.route.append(temp)
                     print(temp)
             print(self.route)
-            
+        
+        if pos!=None:
+            return pos,0
+
         if self.city=='Wall_Street':    
-            return sample_source(-61.63857417592947, -64.93267436677775)
+            return self.sample_source((-91.26371576373391, -92.93867163751861))
         elif self.city=='Union_Square':
-            return self.sample_source((-45.04695452668559, -50.39745826654991))
+            # return random.choice(self.random_source),9999
+            # return (-21.75919854376224, -22.524020509970285)
+            return self.sample_source((-21.75919854376224, -22.524020509970285))
         elif self.city=='Hudson_River':
-            return sample_source(93.1395291367042, -0.7047850456277587)
+            return self.sample_source((82.75054306685817, -4.9921430896916235))
         elif self.city == 'CMU':
-            return sample_source(-26.740129338424083, 93.62126227277517)
+            return self.sample_source((-26.494148909291482, 98.54096082676443))
         elif self.city == 'Allegheny':
-            return sample_source(95.86598041695194, -64.54825006689578)
+            return self.sample_source((98.11349718215925, -65.91599501277392))
         elif self.city == 'South_Shore':
-            return sample_source(-45.15996521572513, -55.452800619759564)
+            return self.sample_source((-40.86770901528804, -57.97858763520175))
+        elif 'navigation' in self.city:
+            return self.sample_source(self.navi_routes[0])
+            
 
         # return (-61.63857417592947, -64.93267436677775)
         # random_loc = random.choice(list(self.Gdict.keys()))
@@ -429,7 +473,7 @@ class dataHelper():
         while True:
             temp = self.sample_location()
             dis=gt.shortest_distance(self.G, source=self.G.vertex(self.Gdict[temp]), target=self.G.vertex(self.Gdict[goal]), weights=self.G.ep['weight'])
-            if dis>=200 and dis<=2000:
+            if dis>=1200 and dis<=2000:
                 long=dis
                 break
         return temp,long
@@ -495,7 +539,11 @@ class dataHelper():
             return 90 - res
 
 
-
+    def get_all_paths(self, source, goal, max_l):
+        res=[]
+        for path in gt.all_paths(self.G, self.G.vertex(self.Gdict[source]), self.G.vertex(self.Gdict[goal]), max_l):
+            res.append(path)
+        return res
     # Convention we are using: in the angle_range, the first value always represent the right boundary of the cone.
     # While the second value represent the left boundary of the cone.
     # This function return 1 if angle is in range, 0 if not.

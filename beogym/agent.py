@@ -1,4 +1,4 @@
-
+import random
 
 class Agent():
 
@@ -22,12 +22,13 @@ class Agent():
         self.past_view = []
         self.reset()
     
-    def reset(self):
-        self.agent_pos_curr,long = self.dh.reset()
+    def reset(self,pos=None):
+        self.agent_pos_curr,long = self.dh.reset(pos)
+        self.source_pos = self.agent_pos_curr
         self.agent_pos_prev = self.agent_pos_curr
         # self.curr_image_name = self.dh.image_name(self.agent_pos_curr)
         # print("Image name: ", self.curr_image_name)
-        self.curr_angle = 0
+        self.curr_angle = random.randint(0,359)
         if self.pano_mode:
             self.curr_view = self.dh.panorama_split(self.curr_angle, self.agent_pos_curr, self.view_res, True)
         else:
@@ -134,19 +135,19 @@ class Agent():
         if action == 0:
             self.go_straight()
         elif action == 1:
-            new_angle = self.dh.fix_angle(self.curr_angle + 22.5)
+            new_angle = self.dh.fix_angle(self.curr_angle + 10)
             self.curr_angle = new_angle
             self.curr_view = self.dh.panorama_split(new_angle,  self.agent_pos_curr, self.view_res)
         elif action == 2:
-            new_angle = self.dh.fix_angle(self.curr_angle - 22.5)
+            new_angle = self.dh.fix_angle(self.curr_angle -10)
             self.curr_angle = new_angle
             self.curr_view = self.dh.panorama_split(new_angle,  self.agent_pos_curr, self.view_res)
         elif action == 3:
-            new_angle = self.dh.fix_angle(self.curr_angle + 67.5)
+            new_angle = self.dh.fix_angle(self.curr_angle + 20)
             self.curr_angle = new_angle
             self.curr_view = self.dh.panorama_split(new_angle,  self.agent_pos_curr, self.view_res)
         elif action == 4:
-            new_angle = self.dh.fix_angle(self.curr_angle - 67.5)
+            new_angle = self.dh.fix_angle(self.curr_angle - 20)
             self.curr_angle = new_angle
             self.curr_view = self.dh.panorama_split(new_angle,  self.agent_pos_curr, self.view_res)
         else:

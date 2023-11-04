@@ -119,8 +119,9 @@ class SingleAtariModel(VisionNetwork):
             #self._convs.conv_mu.train()
             #for param in self._convs.conv_mu.parameters():
             #    param.requires_grad = True
-
-        #self.trainable_variables(True)
+        
+        #dd = self.trainable_variables(True)
+        #embed()
 
 #this is class is reused for every game/city/town
 #this is equivalent to a spec in rl_module api

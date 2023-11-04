@@ -116,6 +116,34 @@ class VAE(nn.Module):
         #return mu
 
 
+class TBeoEncoder(nn.Module):
+    def __init__(self, channel_in=3, ch=16, z=64, h_dim=512):
+        super(TBeoEncoder, self).__init__()
+        self.encoder = nn.Sequential(
+            nn.ZeroPad2d((2, 2, 2, 2)),
+            nn.Conv2d(channel_in, ch, kernel_size=(8, 8), stride=(4, 4)),
+            nn.ReLU(),
+            nn.ZeroPad2d((1, 2, 1, 2)),
+            nn.Conv2d(ch, ch*2, kernel_size=(4, 4), stride=(2, 2)),
+            nn.ReLU(),
+            nn.Conv2d(ch*2, ch*32, kernel_size=(11, 11), stride=(1, 1)),
+            nn.ReLU(),
+        )
+
+        self.conv_mu = nn.Conv2d(ch*32, z, 1, 1)
+        self.joint_layer = nn.Linear(in_features=514, out_features=512, bias=True)
+
+    def forward(self, x, aux):
+        x = torch.moveaxis(x, -1, 1)
+        x = self.encoder(x)
+        x = self.conv_mu(x)
+        x = torch.flatten(x, start_dim=1)
+        
+        #concat aux
+        x = torch.concat((x, aux), axis=1)
+        x = self.joint_layer(x)
+        x = torch.flatten(x, start_dim=1)
+        return x
 
 
 class TEncoder(nn.Module):

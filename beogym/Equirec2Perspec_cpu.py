@@ -31,6 +31,9 @@ class Equirectangular:
             self.db = rocksdb.DB(data_path+'manhattan/data/', rocksdb.Options(create_if_missing=False), read_only=True)
         elif city in Pits:
             self.db = rocksdb.DB(data_path+'pittsburgh/data/', rocksdb.Options(create_if_missing=False), read_only=True)
+        elif 'navigation' in city:
+            self.db = rocksdb.DB(data_path+'touchdown/data/', rocksdb.Options(create_if_missing=False), read_only=True)
+            
         # self.db = rocksdb.DB('/home/tmp/kiran/manhattan/data0/', rocksdb.Options(create_if_missing=False), read_only=True)
         # self.db = plyvel.DB('/lab/tmpig10f/kiran/manhattan/data0/')
         self._img=None
@@ -62,7 +65,7 @@ class Equirectangular:
             # self.t2 += time.time() - temp
 
             return persp
-        height = 208
+        height = self._height
         width = int(float(FOV) / 360 * self._width)
         w_len = np.tan(np.radians(FOV / 2.0))
 

@@ -53,6 +53,7 @@ if __name__ == '__main__':
 
     all_dir = sys.argv[1]
     output_dir = sys.argv[2]
+
     game_list={}
     with open(all_dir,'r') as f:
         for line in f:
@@ -86,7 +87,7 @@ if __name__ == '__main__':
         data = pd.DataFrame(data)
         ax = sns.lineplot(data=data,x='Step', y='Reward',label=name)
         fig = ax.get_figure()
-    out = os.path.join(output_dir,f'{".".join(all_dir.split(".")[:-1])}.png')
+    out = os.path.join(output_dir,f'{".".join(all_dir.split("/")[-1].split(".")[:-1])}.png')
     # out = 'spaceinvaders.png'
     fig.savefig(out)
         # fig.clf()

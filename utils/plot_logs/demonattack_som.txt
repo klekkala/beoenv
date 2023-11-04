@@ -1,0 +1,2 @@
+'som-0.1', 1.a_DemonAttackNoFrameskip-v4_singlegame_full_1CHAN_SOM_ATARI_EXPERT_1CHAN_SPACEDEMO_STANDARD_0.1_32_32_0.0001_0.pt_PolicyNotLoaded_0.0_20000_2000_notemp
+'som-0.25', 1.a_DemonAttackNoFrameskip-v4_singlegame_full_1CHAN_SOM_ATARI_EXPERT_1CHAN_SPACEDEMO_STANDARD_0.25_32_32_0.0001_0.pt_PolicyNotLoaded_0.0_20000_2000_notemp

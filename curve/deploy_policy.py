@@ -93,19 +93,18 @@ def eval_adapter(env_name, backbone_model_path, policy_model_path, rounds):
     
     return str(round(mean(res),1)) + '±' + str(round(stddev(res),1))
 
-g3='CarnivalNoFrameskip-v4'
-g4='AirRaidNoFrameskip-v4'
-g5='NameThisGameNoFrameskip-v4'
-g6='PhoenixNoFrameskip-v4'
+g3='AirRaidNoFrameskip-v4'
+g4='NameThisGameNoFrameskip-v4'
+g5='PhoenixNoFrameskip-v4'
 
 from model_checkpts import *
 
 #these models are trained on g1
 #demon
-models1 = {'E2E ':g1_e2e, 'RANDOM ':g1_random, 'SOM ':g1_SOM, 'TCN ':g1_TCN,'VIP ':g1_VIP, 'VEP ':g1_VEP}
+models1 = {'E2E ':g1_e2e, 'RANDOM ':g1_random, 'SOM ':g1_SOM, 'TCN ':g1_TCN,'VIP ':g1_VIP, 'VEP ':g1_VEP, 'MVEP ':g1_MVEP}
 
 #these models are trained on g2
-models2 = {'E2E ':g2_e2e, 'RANDOM ':g2_random, 'SOM ':g2_SOM, 'TCN ':g2_TCN, 'VIP ':g2_VIP, 'VEP ':g2_VEP}
+models2 = {'E2E ':g2_e2e, 'RANDOM ':g2_random, 'SOM ':g2_SOM, 'TCN ':g2_TCN, 'VIP ':g2_VIP, 'VEP ':g2_VEP, 'MVEP ':g2_MVEP}
 
 
 

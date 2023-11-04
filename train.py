@@ -31,7 +31,7 @@ from ray.rllib.policy.sample_batch import SampleBatch
 from ray.rllib.evaluation import Episode, RolloutWorker
 from ray.rllib.algorithms.algorithm_config import AlgorithmConfig
 from models.atarimodels import SingleAtariModel, SharedBackboneAtariModel, SharedBackbonePolicyAtariModel, AtariCNNV2PlusRNNModel
-from models.beogymmodels import SingleBeogymModel, BeogymCNNV2PlusRNNModel, FrozenBackboneModel, SingleImageModel
+from models.beogymmodels import SingleBeogymModel, BeogymCNNV2PlusRNNModel, FrozenBackboneModel, SingleImageModel, ComplexNet
 from ray.rllib.algorithms.ppo import PPOConfig
 from typing import Dict, Tuple
 import gym
@@ -270,6 +270,9 @@ def beogym_single_train(str_logger, backbone='e2e', policy=None):
     #else:
     print("1chanlstm********************")
     ModelCatalog.register_custom_model("Single", SingleImageModel)
+    ModelCatalog.register_custom_model("FrozenBackboneModel", FrozenBackboneModel)
+    ModelCatalog.register_custom_model("ComplexNet", ComplexNet)
+    
     #do all the config overwrites here
     use_config.update(
                 {
@@ -280,8 +283,8 @@ def beogym_single_train(str_logger, backbone='e2e', policy=None):
                         "logdir": os.path.expanduser(args.log + '/' + args.env_name + '/' + str_logger)
                     },
                     'model':{
-                        "custom_model": "Single",
-                        "custom_model_config" : {"backbone": args.backbone, "backbone_path": args.ckpt + args.env_name + "/" + args.backbone, "train_backbone": args.train_backbone, 'temporal': args.temporal, 'conv_filters': [[16, [8, 8], 4], [32, [4, 4], 2], [512, [11, 11], 1]]},
+                        "custom_model": "ComplexNet",
+                        "custom_model_config" : {"backbone": args.backbone, "backbone_path": args.ckpt + args.env_name + "/" + args.backbone, "train_backbone": args.train_backbone, 'temporal': args.temporal, 'vf_share_layers': True, 'conv_filters': [[16, [8, 8], 4], [32, [4, 4], 2], [512, [11, 11], 1]]},
                         "framestack": False,
                         "use_lstm": False,
                         "vf_share_layers": True,
