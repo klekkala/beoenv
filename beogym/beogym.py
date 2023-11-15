@@ -208,7 +208,9 @@ class BeoGym(gym.Env):
         # temp = [self.dh.fix_angle(self.dh.get_angle(self.agent.agent_pos_curr, self.courier_goal))/360]
         # aux = [(self.agent.agent_pos_curr[1] + 100) / 200, (self.agent.agent_pos_curr[0] + 100) / 200,self.agent.curr_angle / 360, (self.courier_goal[1] + 100) / 200,(self.courier_goal[0] + 100) / 200]
         # aux+=temp
-        self.agent.dis_to_goal = gt.shortest_distance(self.dh.G, source=self.dh.G.vertex(self.dh.Gdict[self.agent.agent_pos_curr]), target=self.dh.G.vertex(self.dh.Gdict[self.courier_goal]), weights=self.dh.G.ep['weight'])
+        # self.agent.dis_to_goal = gt.shortest_distance(self.dh.G, source=self.dh.G.vertex(self.dh.Gdict[self.agent.agent_pos_curr]), target=self.dh.G.vertex(self.dh.Gdict[self.courier_goal]), weights=self.dh.G.ep['weight'])
+        self.agent.dis_to_goal  =  math.sqrt((self.agent.agent_pos_curr[0] - self.courier_goal[0])**2 + (self.agent.agent_pos_curr[1] - self.courier_goal[1])**2)
+
         threshold = 15
         self.marks = []
         self.marks_idx = 0
@@ -511,14 +513,16 @@ class BeoGym(gym.Env):
             return reward, found_goal
 
         #distance_to_goal = 1
-        distance_to_goal = gt.shortest_distance(self.dh.G, source=self.dh.G.vertex(self.dh.Gdict[self.agent.agent_pos_curr]), target=self.dh.G.vertex(self.dh.Gdict[self.courier_goal]), weights=self.dh.G.ep['weight'])
+        # distance_to_goal = gt.shortest_distance(self.dh.G, source=self.dh.G.vertex(self.dh.Gdict[self.agent.agent_pos_curr]), target=self.dh.G.vertex(self.dh.Gdict[self.courier_goal]), weights=self.dh.G.ep['weight'])
+        distance_to_goal = math.sqrt((self.agent.agent_pos_curr[0] - self.courier_goal[0])**2 + (self.agent.agent_pos_curr[1] - self.courier_goal[1])**2)
         # Does not give reward if the agent visited old locations:
         self.agent.dis_to_goal = distance_to_goal
         if self.agent.agent_pos_curr in self.dh.visited_locations:
             # self.agent.dis_to_goal = distance_to_goal
             return reward, found_goal
         # if self.agent.agent_pos_curr == self.courier_goal:
-        if distance_to_goal < self.min_radius_meters:
+        # if distance_to_goal < self.min_radius_meters:
+        if distance_to_goal < 1:
             # reward = self.long
             # _, self.long = self.agent.reset()
             return 1,True
@@ -602,7 +606,9 @@ class BeoGym(gym.Env):
         allAct=[]
         allRew=[]
         allTar=[]
+        allSrt=[]
         allTer=[]
+        allp=[]
         total_steps=0
         all_nodes=[]
         for i in self.dh.Gdict.keys():
@@ -610,13 +616,25 @@ class BeoGym(gym.Env):
         all_x,all_y =  zip(*all_nodes)
         while total_steps<1000000:
             self.reset()
-            self.agent.reset(tuple(self.info['source']))
+            pos_p=[tuple(self.info['source'])]
+            for i in range(5):
+                new_ps=[]
+                for q in pos_p:
+                    new_ps+=self.dh.find_adjacent(q)
+                pos_p+=new_ps
+                pos_p = list(set(pos_p))
+            # _,self.long = self.agent.reset(tuple(self.info['source']))
+            srt_loc = random.choice(pos_p)
+            _,self.long = self.agent.reset(srt_loc)
+            # self.agent.reset(tuple(self.info['source']))
             self.courier_goal = tuple(self.info['goal'])
+
             obsRec=[]
             auxRec=[]
             actRec=[]
             rewRec=[]
             tarRec=[]
+            srtRec=[]
             terRec=[]
             now_shortest = gt.shortest_distance(self.dh.G, source=self.dh.G.vertex(self.dh.Gdict[self.agent.agent_pos_curr]), target=self.dh.G.vertex(self.dh.Gdict[self.courier_goal]), weights=self.dh.G.ep['weight'])
             source_goal = now_shortest
@@ -641,13 +659,18 @@ class BeoGym(gym.Env):
                 tmp_rd = self.dh.getShortestPathNodes(node4[0], node4[1])
                 idx = 0
                 while tmp_rd[idx]==roads4[-1]:
+                    if idx==len(tmp_rd)-1:
+                        break
                     idx+=1
                 roads4+=tmp_rd[idx:]
                 tmp_rd = self.dh.getShortestPathNodes(node4[1], self.courier_goal)
-                idx = 0
-                while tmp_rd[idx]==roads4[-1]:
-                    idx+=1
-                roads4+=tmp_rd[idx:]
+                if len(tmp_rd) != 0:
+                    idx = 0
+                    while tmp_rd[idx]==roads4[-1]:
+                        if idx==len(tmp_rd)-1:
+                            break
+                        idx+=1
+                    roads4+=tmp_rd[idx:]
                 # tmp_rd = self.dh.getShortestPathNodes(node4[2], node4[3])
                 # idx = 0
                 # while tmp_rd[idx]==roads4[-1]:
@@ -681,6 +704,7 @@ class BeoGym(gym.Env):
                         obsRec.append(obs['obs'])
                         auxRec.append(obs['aux'])
                         tarRec.append((self.courier_goal[0], self.courier_goal[1]))
+                        srtRec.append((srt_loc[0], srt_loc[1]))
                         actRec.append(cact+1)
                         rewRec.append(reward)
                         if not done:
@@ -694,9 +718,12 @@ class BeoGym(gym.Env):
                     if not flag:
 
                         obs, reward, done, info = self.step(0)
+                        if reward>0:
+                            allp.append(self.agent.agent_pos_curr)
                         obsRec.append(obs['obs'])
                         auxRec.append(obs['aux'])
                         tarRec.append((self.courier_goal[0], self.courier_goal[1]))
+                        srtRec.append((srt_loc[0], srt_loc[1]))
                         actRec.append(0)
                         rewRec.append(reward)
                     else:
@@ -709,6 +736,7 @@ class BeoGym(gym.Env):
                     allAct+=actRec
                     allRew+=rewRec
                     allTar+=tarRec
+                    allSrt+=srtRec
                     allTer+=terRec
                     total_steps+=len(terRec)
 
@@ -716,7 +744,7 @@ class BeoGym(gym.Env):
                     plt.scatter(all_x, all_y, color='blue', s=1)
                     plt.scatter(x_r, y_r, color='red', s=1)
                     plt.legend()
-                    plt.savefig(f'/home6/tmp/kiran/expert_3chan_beogym/skill1/expert_3chan_unionsquare/5/50/plots_aux/{total_steps}.png')
+                    plt.savefig(f'/home6/tmp/kiran/expert_3chan_beogym/skill2/expert_3chan_hudsonriver/5/50/plots_aux/{total_steps}.png')
                     plt.clf()
                     print(total_steps)
                     break
@@ -728,6 +756,7 @@ class BeoGym(gym.Env):
         allAct = allAct[:-sliceL]
         allRew = allRew[:-sliceL]
         allTar = allTar[:-sliceL]
+        allSrt = allSrt[:-sliceL]
         allTer = allTer[:-sliceL]
         allTer[-1] = 1
 
@@ -736,12 +765,115 @@ class BeoGym(gym.Env):
         allAct = np.array(allAct)
         allRew = np.array(allRew)
         allTar = np.array(allTar)
+        allSrt = np.array(allSrt)
         allTer = np.array(allTer)
-        fileName = '/home6/tmp/kiran/expert_3chan_beogym/skill1/expert_3chan_unionsquare/5/50/'
+        allp = np.array(allp)
+        fileName = '/home6/tmp/kiran/expert_3chan_beogym/skill2/expert_3chan_hudsonriver/5/50/'
         np.save(fileName+'observation.npy',allObs)
         np.save(fileName+'aux.npy',allAux)
         np.save(fileName+'action.npy',allAct)
         np.save(fileName+'reward.npy',allRew)
         np.save(fileName+'goal.npy',allTar)
+        np.save(fileName+'start.npy',allSrt)
         np.save(fileName+'terminal.npy',allTer)
+        np.save(fileName+'allp.npy',allp)
+
+    def output_video(self):
+        obsRec=[]
+        auxRec=[]
+        actRec=[]
+        rewRec=[]
+        tarRec=[]
+        terRec=[]
+        posRec=[]
+        all_nodes=[]
+        for i in self.dh.Gdict.keys():
+            all_nodes.append(i)
+        all_x,all_y =  zip(*all_nodes)
+        self.reset()
+        self.agent.reset(tuple(self.info['source']))
+        self.courier_goal = tuple(self.info['goal'])
+        shortest_path = self.dh.getShortestPathNodes(tuple(self.info['source']), tuple(self.info['goal']))
+        flag=False
+        for i in range(len(shortest_path)):
+            if i != len(shortest_path) - 1:
+                new_pos, curr_pos, new_angle = self.dh.find_nearest(self.agent.agent_pos_curr, self.agent.agent_pos_prev, self.agent.curr_angle, "forward")
+                while new_pos!=shortest_path[i + 1]:
+                    agl = self.dh.fix_angle(self.dh.get_angle(shortest_path[i], shortest_path[i + 1]))
+                    minAngle=500
+                    cact=-1
+                    acts=[10, -10, 20, -20]
+                    for act in range(len(acts)):
+                        tAngle=abs(self.dh.get_distance(agl, self.agent.curr_angle+acts[act]))
+                        if tAngle < minAngle:
+                            cact=act
+                            minAngle = tAngle
+                    obs, reward, done, info = self.step(cact+1)
+                    obsRec.append(self.agent.curr_view)
+                    x_r,y_r = self.agent.agent_pos_curr
+                    plt.scatter(all_x, all_y, color='blue', s=1)
+                    plt.scatter(x_r, y_r, color='red', s=40)
+                    # plt.legend()
+                    figure = plt.gcf()
+                    figure.canvas.draw()
+                    img = np.array(figure.canvas.buffer_rgba())
+                    img = cv2.cvtColor(img, cv2.COLOR_RGBA2BGRA)
+                    img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+                    plt.clf()
+                    posRec.append(img)
+                    auxRec.append(obs['aux'])
+                    tarRec.append((self.courier_goal[0], self.courier_goal[1]))
+                    actRec.append(cact+1)
+                    rewRec.append(reward)
+                    if not done:
+                        terRec.append(0)
+                    else:
+                        flag=True
+                        break
+                    new_pos, curr_pos, new_angle = self.dh.find_nearest(self.agent.agent_pos_curr, self.agent.agent_pos_prev, self.agent.curr_angle, "forward")
+
+                # if not done:
+                if not flag:
+
+                    obs, reward, done, info = self.step(0)
+                    obsRec.append(self.agent.curr_view)
+                    x_r,y_r = self.agent.agent_pos_curr
+                    plt.scatter(all_x, all_y, color='blue', s=1)
+                    plt.scatter(x_r, y_r, color='red', s=40)
+                    # plt.legend()
+                    figure = plt.gcf()
+                    figure.canvas.draw()
+                    img = np.array(figure.canvas.buffer_rgba())
+                    img = cv2.cvtColor(img, cv2.COLOR_RGBA2BGRA)
+                    img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+                    plt.clf()
+                    posRec.append(img)
+                    auxRec.append(obs['aux'])
+                    tarRec.append((self.courier_goal[0], self.courier_goal[1]))
+                    actRec.append(0)
+                    rewRec.append(reward)
+                else:
+                    done=True
+                # print(curr_steps)
+            if done:
+                terRec.append(1)
+                # cv2.imwrite('se1e.png', img)
+                break
+            else:
+                terRec.append(0)
+
+        height, width, _ = obsRec[0].shape
+        for i in range(len(posRec)):
+            posRec[i] = cv2.resize(posRec[i], (height, height))
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # You can use other codecs like 'XVID', 'MP4V', 'MJPG', etc.
+        output_video = cv2.VideoWriter('Wall.mp4', fourcc, 2, (208, 624))
+        nn=0
+        for left_img, right_img in zip(obsRec, posRec):
+            # print(left_img.shape)
+            # print(right_img.shape)
+            concatenated_image = np.hstack((left_img, right_img))
+            cv2.imwrite(f'./all_road/Wall/{nn}.jpg', concatenated_image)
+            nn+=1
+            # output_video.write(concatenated_image)
+        output_video.release()
 

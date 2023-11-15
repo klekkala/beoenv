@@ -59,6 +59,7 @@ if __name__ == '__main__':
         for line in f:
             game_list[line.strip().split(',')[0].replace("'",'')] = line.strip().split(',')[1].replace(' ','')
     data_path = '/lab/kiran/logs/rllib/atari/notemp/'
+    #data_path = '/lab/kiran/logs/rllib/beogym/notemp/'
     for name,i in game_list.items():
         game_dir = os.path.join(data_path, i)
         print(game_dir)

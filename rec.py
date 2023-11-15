@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import cv2
 import pickle
 
-env = BeoGym({'city':'Union_Square','data_path':'/home6/tmp/kiran/'})
+env = BeoGym({'city':'Hudson_River','data_path':'/home6/tmp/kiran/'})
 # env.agent.reset((-56.42094821954678, -46.487781984396584))
 # env.courier_goal = (-96.8055251689076, -94.02399239301302)
 # paths=[]

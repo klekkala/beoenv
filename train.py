@@ -87,8 +87,9 @@ def pick_config_env(str_env):
 def rllib_loop(config, str_logger):
 
     #final modifications in the config
-    if args.temporal == "lstm" or args.temporal == "attention":
-        args.stop_timesteps = 75000000
+    #if args.temporal == "lstm" or args.temporal == "attention":
+    if args.env_name == "beogym":
+        args.stop_timesteps = 20000000
 
     print("program running for, ", args.stop_timesteps)
     #load the config

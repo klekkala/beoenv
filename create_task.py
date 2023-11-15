@@ -14,10 +14,10 @@ def euclidean_distance(coord1, coord2):
     return math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
 
 dX,dY=(40.384,47.536)
-# dX,dY=(30,25)
+# dX,dY=(15,85)
 maxdX=[]
 maxdY=[]
-with open('task_new.json', 'w') as f:
+with open('task.json', 'w') as f:
     for idx,i in enumerate(cities):
         env = BeoGym({'city':i,'data_path':'/home6/tmp/kiran/'})
         temp = {'no.':1, 'task_id':idx, 'city':i}
@@ -25,18 +25,20 @@ with open('task_new.json', 'w') as f:
             courier_goal= (-96.8055251689076, -94.02399239301302)
             #(-91.26371576373391, -92.93867163751861)
         elif i=='Union_Square':
-            courier_goal = (-36.14906196121752, -57.522601891088236) #center
-            # courier_goal = (-56.353110976479435, -52.67864397355789)
+            # courier_goal = (-36.14906196121752, -57.522601891088236) #center
+            courier_goal = (-56.353110976479435, -52.67864397355789)
             # courier_goal = (-21.75919854376224, -22.524020509970285)
         elif i=='Hudson_River':
-            courier_goal = (17.013602534793975, -71.66840979149978)
+            courier_goal = (32.34645696528139, 13.539046591584182) #center
+            # courier_goal = (17.013602534793975, -71.66840979149978)
             #(82.75054306685817, -4.9921430896916235)
         elif i == 'CMU':
             courier_goal = (-4.421576280722888, 38.25098452572334) #center
             # courier_goal = (-34.20243940774522, 13.512665953129144)
             #(-26.494148909291482, 98.54096082676443)
         elif i == 'Allegheny':
-            courier_goal = (-27.688091834544252, -96.02609714096437)
+            courier_goal = (32.03421933355679, -81.37135677147891) #center
+            # courier_goal = (-27.688091834544252, -96.02609714096437)
             #(98.11349718215925, -65.91599501277392)
         elif i == 'South_Shore':
             # courier_goal = (-99.62801690964798, -93.04901822643482)
@@ -76,8 +78,8 @@ with open('task_new.json', 'w') as f:
         plt.clf()
 
         del env
-        # json.dump(temp, f)
-        # f.write('\n')
+        json.dump(temp, f)
+        f.write('\n')
 
 print(maxdX)
 print(maxdY)
