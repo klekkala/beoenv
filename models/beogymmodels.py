@@ -280,6 +280,18 @@ class ComplexNet(TorchModelV2, nn.Module):
             checkpoint = torch.load(model_config['custom_model_config']['backbone_path'], map_location="cpu")
             self.encoder.load_state_dict(checkpoint['model_state_dict'])
 
+        if not model_config['custom_model_config']['train_backbone']:
+            print("freezing encoder layers")
+                #freeze the entire backbone
+            self.encoder.eval()
+            for param in self.encoder.parameters():
+                param.requires_grad = False
+            for name, param in self.encoder.named_parameters():
+                param.requires_grad = False
+        else:
+            print('not freezing')
+
+        #embed()
 
     @override(ModelV2)
     def forward(self, input_dict, state, seq_lens):

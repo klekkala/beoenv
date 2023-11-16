@@ -118,11 +118,12 @@ def rllib_loop(config, str_logger):
     
     print(config)
 
+    #COMMENTED THIS OUT BECAUSE ITS TAKING SO MUCH SPACE
     #copy the current codebase to the log directory
-    path = Path(args.log + "/" + args.env_name + "/" + str_logger)
-    path = Path(args.log + "/" + args.env_name + "/" + str_logger + "/beoenv")
-    path.mkdir(parents=True, exist_ok=True)
-    distutils.dir_util.copy_tree("/lab/kiran/beoenv/", args.log + "/" + str_logger + "/beoenv/")
+    #path = Path(args.log + "/" + args.env_name + "/" + str_logger)
+    #path = Path(args.log + "/" + args.env_name + "/" + str_logger + "/beoenv")
+    #path.mkdir(parents=True, exist_ok=True)
+    #distutils.dir_util.copy_tree("/lab/kiran/beoenv/", args.log + "/" + str_logger + "/beoenv/")
 
     ##Training starts
     #if args.no_tune:

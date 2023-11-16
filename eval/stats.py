@@ -20,15 +20,14 @@ ModelCatalog.register_custom_model("model", SingleAtariModel)
 
 
 if sys.argv[1] == 'atari':
-    games = {'DemonAttackNoFrameskip-v4': 'DA', 'SpaceInvadersNoFrameskip-v4': 'SA', 'CarnivalNoFrameskip-v4': 'CA'}
-    file_path = 'atari.csv'
+    games = {'DemonAttackNoFrameskip-v4': 'DA', 'SpaceInvadersNoFrameskip-v4': 'SA', 'CarnivalNoFrameskip-v4': 'CA', 'AirRaidNoFrameskip-v4': 'AR', 'NameThisGameNoFrameskip-v4': 'NG'}
     from atari_checkpts import models
+    file_path = 'atari.csv'
 
 else:
-    games = {'Wall_Street': 'WS', 'Union_Square': 'US'}
-    file_path = 'beogym.csv'
+    games = {'Wall_Street': 'WS', 'Union_Square': 'US', 'Hudson_River': 'HR', 'CMU': 'CMU', 'Shore_Street': 'SS', 'Allegheny': 'AG'}
     from beogym_checkpts import models
-
+    file_path = 'beogym.csv'
 
 
 def mean(data):
@@ -98,7 +97,7 @@ result = {}
 #iterate through all the game_specific models
 for modelkey, _ in outdict.items():
     result[modelkey] = []
-    
+
     #iterate through all the games
     for key, values in outdict[modelkey].items():
         #iterate through all games
@@ -111,7 +110,7 @@ for gamekey, gamevalue in games.items():
     final_cols.append(f'{gamevalue} ')
 
 df.columns = final_cols
-df.to_csv('output.csv')
+df.to_csv(sys.argv[1] + '_evaluation.csv')
  
 
 #random_generated_int = random.randint(0, 2**31-1)

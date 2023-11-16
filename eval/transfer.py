@@ -49,18 +49,16 @@ def eval_adapter(env_name, model_path):
             break
     return total
 
+
 if sys.argv[1] == 'atari':
-    games = {'DemonAttackNoFrameskip-v4': 'DA', 'SpaceInvadersNoFrameskip-v4': 'SA', 'CarnivalNoFrameskip-v4': 'CA'}
-else:
-    games = {'Wall_Street': 'WS', 'Union_Square': 'US'}
-
-
-if sys.argv[1] == 'beogym':
-    from beogym_checkpts import models
-else:
+    games = {'DemonAttackNoFrameskip-v4': 'DA', 'SpaceInvadersNoFrameskip-v4': 'SA', 'CarnivalNoFrameskip-v4': 'CA', 'AirRaidNoFrameskip-v4': 'AR', 'NameThisGameNoFrameskip-v4': 'NG'}
     from atari_checkpts import models
+    f = open('atari.csv', 'r')
 
-
+else:
+    games = {'Wall_Street': 'WS', 'Union_Square': 'US', 'Hudson_River': 'HR', 'CMU': 'CMU', 'Shore_Street': 'SS', 'Allegheny': 'AG'}
+    from beogym_checkpts import models
+    f = open('beogym.csv', 'r')
 
 
 
@@ -79,7 +77,7 @@ else:
 # f.close()
 
 
-with open('atari.csv', 'r') as f:
+with open(sys.argv[1] + '.csv', 'r') as f:
     all_lines = f.readlines()
 new_lines=[]
 for each_line in all_lines:
@@ -92,7 +90,7 @@ for each_line in all_lines:
     total_value = eval_adapter(gamename, model_path)
     new_lines.append(each_line.strip()+', '+str(total_value)+'\n')
 
-with open('atari.csv', 'w') as f:
+with open(sys.argv[1] + '.csv', 'w') as f:
     f.writelines(new_lines)
 
 # for modeldict in models:

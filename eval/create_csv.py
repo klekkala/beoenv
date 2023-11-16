@@ -19,17 +19,16 @@ ModelCatalog.register_custom_model("model", SingleAtariModel)
 
 
 if sys.argv[1] == 'atari':
-    games = {'DemonAttackNoFrameskip-v4': 'DA', 'SpaceInvadersNoFrameskip-v4': 'SA', 'CarnivalNoFrameskip-v4': 'CA'}
-else:
-    games = {'Wall_Street': 'WS', 'Union_Square': 'US'}
-
-
-if sys.argv[1] == 'beogym':
-    from beogym_checkpts import models
-    f = open('beogym.csv', 'r')
-else:
+    games = {'DemonAttackNoFrameskip-v4': 'DA', 'SpaceInvadersNoFrameskip-v4': 'SA', 'CarnivalNoFrameskip-v4': 'CA', 'AirRaidNoFrameskip-v4': 'AR', 'NameThisGameNoFrameskip-v4': 'NG'}
     from atari_checkpts import models
     f = open('atari.csv', 'r')
+
+else:
+    games = {'Wall_Street': 'WS', 'Union_Square': 'US', 'Hudson_River': 'HR', 'CMU': 'CMU', 'Shore_Street': 'SS', 'Allegheny': 'AG'}
+    from beogym_checkpts import models
+    f = open('beogym.csv', 'r')
+
+
 
 
 f = open('atari.csv', 'w')
