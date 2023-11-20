@@ -1,0 +1,4 @@
+'E2E', e2e/1.a_CarnivalNoFrameskip-v4_singlegame_full_e2e_PolicyNotLoaded_0.0_20000_2000_notemp
+'Random', random/1.a_CarnivalNoFrameskip-v4_singlegame_full_random_PolicyNotLoaded_0.0_20000_2000_notemp
+'VEP', vep/1.a_CarnivalNoFrameskip-v4_singlegame_full_1CHAN_NVEP_ATARI_EXPERT_1CHAN_SPACEDEMO_STANDARD_1.0_0.1_1.0_same_32_0_0.0001_0.pt_PolicyNotLoaded_0.0_20000_2000_notemp
+'VEP+', vep/1.a_CarnivalNoFrameskip-v4_singlegame_full_1CHAN_NVEP_ATARI_EXPERT_1CHAN_SPACECARNIVALDEMO_STANDARD_1.0_0.1_1.0_same_32_0_0.0001_0.pt_PolicyNotLoaded_0.0_20000_2000_notemp

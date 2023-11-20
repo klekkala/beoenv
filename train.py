@@ -97,11 +97,15 @@ def rllib_loop(config, str_logger):
     if args.machine != "":
         with open(configs.resource_file + '/' + args.env_name + '.yaml', 'r') as cfile:
             config_data = yaml.safe_load(cfile)
-
+            print(cfile)
         #update the args in the config.py file
         print("updating resource parameters")
         args.num_workers, args.num_envs, args.num_gpus, args.gpus_worker, args.cpus_worker, _, args.data_path = config_data[args.machine]
-        
+
+        #datapaths are not loading properly fix this!
+        if args.machine == 'iGpu11':
+            args.data_path = '/home2/kiran/'
+    
     config.update(
                 {"num_workers" : args.num_workers,
                 "num_envs_per_worker" : args.num_envs,

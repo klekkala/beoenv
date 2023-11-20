@@ -36,16 +36,15 @@ def seed_everything(seed, env):
 ##wall_street
 #my_restored_policy = Policy.from_checkpoint("/lab/kiran/logs/rllib/beogym/notemp/1.a_Wall_Street_singlegame_full_3CHAN_TCN_BEOGYM_EXPERT_3CHAN_UNIONWALL_STANDARD_1.0_32_0_0.0001_0.pt_PolicyNotLoaded_0.0_20000_2000_notemp/23_11_04_01_14_18/checkpoint/")
 
-my_restored_policy = Policy.from_checkpoint("/lab/kiran/logs/rllib/beogym/notemp/1.a_Wall_Street_singlegame_full_3CHAN_NVEP_BEOGYM_EXPERT_3CHAN_UNIONWALL_STANDARD_1.0_0.1_1.0_same_32_0_0.0001_0.pt_PolicyNotLoaded_0.0_20000_2000_notemp/23_11_09_01_41_08/checkpoint/")
-
+my_restored_policy = Policy.from_checkpoint("/lab/kiran/logs/rllib/beogym/notemp/1.a_Wall_Street_singlegame_full_3CHAN_NVEP_BEOGYM_EXPERT_3CHAN_UNIONWALL_STANDARD_2.0_-1.0_2.0_same_32_0_0.0001_0.pt_PolicyNotLoaded_0.0_20000_2000_notemp/23_11_16_01_27_07/checkpoint/")
 
 
 #my_restored_policy = Policy.from_checkpoint("/lab/kiran/logs/rllib/beogym/notemp/1.a_Wall_Street_singlegame_full_3CHAN_NVEP_BEOGYM_EXPERT_3CHAN_UNIONWALL_STANDARD_1.0_-1.0_1.0_same_32_0_0.0001_0.pt_PolicyNotLoaded_0.0_20000_2000_notemp/23_11_13_10_58_05/checkpoint/")
 
 
 from envs import SingleBeoEnv
-env = SingleBeoEnv({'env': 'Union_Square', 'data_path': '/home6/tmp/kiran/'})
-#env = SingleBeoEnv({'env': 'Wall_Street', 'data_path': '/home6/tmp/kiran/'})
+#env = SingleBeoEnv({'env': 'Union_Square', 'data_path': '/home6/tmp/kiran/'})
+env = SingleBeoEnv({'env': 'Wall_Street', 'data_path': '/home6/tmp/kiran/'})
 
 
 res = []
