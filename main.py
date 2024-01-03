@@ -45,7 +45,7 @@ if __name__ == "__main__":
     
     #log directory
     suffix = datetime.datetime.now().strftime("%y_%m_%d_%H_%M_%S")
-    str_logger = args.temporal + "/" + args.prefix + "_" + args.set + "_" + args.setting + "_" + args.shared + "_" + args.backbone + "_" + args.policy + "_" + str(args.kl_coeff) + "_" + str(args.buffer_size) + "_" + str(args.batch_size) + "_" + args.temporal + "/" + suffix
+    str_logger = args.prefix + "_" + args.set + "_" + args.setting + "_" + args.shared + "_" + args.backbone + "_" + args.policy + "_" + str(args.kl_coeff) + "_" + str(args.buffer_size) + "_" + str(args.batch_size) + "_" + args.temporal + "/" + suffix
 
     #training, once finished, save the logs
     

@@ -277,6 +277,8 @@ class ComplexNet(TorchModelV2, nn.Module):
         if "e2e" not in model_config['custom_model_config']['backbone_path'] and "random" not in model_config['custom_model_config']['backbone_path']:
             print(model_config['custom_model_config']['backbone_path'])
             print("loading model weights")
+            if "RESNET" in model_config['custom_model_config']['backbone_path']:
+                self.encoder = TBeoEncoder(channel_in=3, ch=64, z=512)
             checkpoint = torch.load(model_config['custom_model_config']['backbone_path'], map_location="cpu")
             self.encoder.load_state_dict(checkpoint['model_state_dict'])
 

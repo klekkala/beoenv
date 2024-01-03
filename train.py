@@ -94,17 +94,21 @@ def rllib_loop(config, str_logger):
     print("program running for, ", args.stop_timesteps)
     #load the config
     #extract data from the config file
-    if args.machine != "":
-        with open(configs.resource_file + '/' + args.env_name + '.yaml', 'r') as cfile:
-            config_data = yaml.safe_load(cfile)
-            print(cfile)
-        #update the args in the config.py file
-        print("updating resource parameters")
-        args.num_workers, args.num_envs, args.num_gpus, args.gpus_worker, args.cpus_worker, _, args.data_path = config_data[args.machine]
+    
+    import socket
+    machine = socket.gethostname()
+    
+    with open(configs.resource_file + '/' + args.env_name + '.yaml', 'r') as cfile:
+        config_data = yaml.safe_load(cfile)
+        print(cfile)
+    
+    #update the args in the config.py file
+    print("updating resource parameters")
+    args.num_workers, args.num_envs, args.num_gpus, args.gpus_worker, args.cpus_worker, _, args.data_path = config_data[machine]
 
-        #datapaths are not loading properly fix this!
-        if args.machine == 'iGpu11':
-            args.data_path = '/home2/kiran/'
+    #datapaths are not loading properly fix this!
+    #if args.machine == 'iGpu11':
+    #    args.data_path = '/home2/kiran/'
     
     config.update(
                 {"num_workers" : args.num_workers,
@@ -145,7 +149,7 @@ def rllib_loop(config, str_logger):
 
     
     if args.setting == 'seqgame' and config['env_config']['env'] != configs.all_envs[0]:
-        policy_ckpt = Policy.from_checkpoint(args.log + "/" + args.env_name + "/" + str_logger.replace(config['env_config']['env'] + '/', '') + "/checkpoint")
+        policy_ckpt = Policy.from_checkpoint(args.log + "/" + args.env_name + "/" + args.temporal + "/" + args.set + "/" + str_logger.replace(config['env_config']['env'] + '/', '') + "/checkpoint")
         plc.set_weights(policy_ckpt.get_weights())
 
     #if args.policy != None:
@@ -158,7 +162,7 @@ def rllib_loop(config, str_logger):
     #load the backbone
     if args.backbone != 'e2e' and 'e2e' in args.backbone:
         embed()
-        load_ckpt = Policy.from_checkpoint(args.log + "/" + args.env_name + "/" + args.temporal + "/" + args.backbone + "/checkpoint").get_weights()
+        load_ckpt = Policy.from_checkpoint(args.log + "/" + args.temporal + "/" + args.env_name + "/" + args.set + "/" + args.backbone + "/checkpoint").get_weights()
         embed()
         orig_wts = plc.get_weights()
         chng_wts = {}
@@ -179,9 +183,9 @@ def rllib_loop(config, str_logger):
         # stop training of the target train steps or reward are reached
         #MAKE SURE YOU KEEP SAVING CHECKPOINTS
         if result["timesteps_total"] >= args.stop_timesteps:
-            algo.save(checkpoint_dir=args.log + "/" + args.env_name + "/" + str_logger.replace(config['env_config']['env'] + '/', '') + "/checkpoint/wholealgo")
+            algo.save(checkpoint_dir=args.log + "/" + args.env_name + "/" + args.temporal + "/" + args.set + "/" + str_logger.replace(config['env_config']['env'] + '/', '') + "/checkpoint/wholealgo")
             policy = algo.get_policy()
-            policy.export_checkpoint(args.log + "/" + args.env_name + "/" + str_logger.replace(config['env_config']['env'] + '/', '') + "/checkpoint")
+            policy.export_checkpoint(args.log + "/" + args.env_name + "/" +  args.temporal + "/" + args.set + "/" + str_logger.replace(config['env_config']['env'] + '/', '') + "/checkpoint")
             break
     
     algo.stop()
@@ -217,6 +221,7 @@ def single_train(str_logger, backbone='e2e', policy=None):
     else:
         ModelCatalog.register_custom_model("model", SingleAtariModel)
 
+    embed()
     #do all the config overwrites here
     use_config.update(
                 {
@@ -224,7 +229,7 @@ def single_train(str_logger, backbone='e2e', policy=None):
                     "env_config": env_config,
                     "logger_config" : {
                         "type": UnifiedLogger,
-                        "logdir": os.path.expanduser(args.log + '/' + args.env_name + '/' + str_logger)
+                        "logdir": os.path.expanduser(args.log + '/' + args.env_name + '/' + args.temporal + '/' + args.set + '/' + str_logger)
                     }
                 }
             )
@@ -286,7 +291,7 @@ def beogym_single_train(str_logger, backbone='e2e', policy=None):
                     "env_config": env_config,
                     "logger_config" : {
                         "type": UnifiedLogger,
-                        "logdir": os.path.expanduser(args.log + '/' + args.env_name + '/' + str_logger)
+                        "logdir": os.path.expanduser(args.log + '/' + args.env_name + '/' + args.temporal + '/' + args.set + '/' + str_logger)
                     },
                     'model':{
                         "custom_model": "ComplexNet",
@@ -336,7 +341,7 @@ def seq_train(str_logger):
              "env_config" : {'env': eachenv, "full_action_space": False, 'framestack': args.temporal == '4stack'},
              "logger_config" : {
                 "type": UnifiedLogger,
-                "logdir": os.path.expanduser(args.log + '/' + args.env_name + '/' + str_logger + "/" + eachenv + "/")
+                "logdir": os.path.expanduser(args.log + '/' + args.env_name + '/' + args.set + '/'  + str_logger + "/" + eachenv + "/")
                 }
             }
         )
@@ -398,7 +403,7 @@ def train_multienv(str_logger):
                     "env_config": env_config,
                     "logger_config" : {
                         "type": UnifiedLogger,
-                        "logdir": os.path.expanduser(args.log + '/' + args.env_name + '/' + str_logger)
+                        "logdir": os.path.expanduser(args.log + '/' + args.env_name + '/' + args.set + '/'  + str_logger)
                     },
                     "multiagent": {
                         "policies" : policies,
