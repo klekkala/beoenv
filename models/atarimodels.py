@@ -80,7 +80,8 @@ class SingleAtariModel(VisionNetwork):
         elif '4STACK_VAE' in model_config['custom_model_config']['backbone']:
             self._convs = VAE(channel_in=chan_in, ch=32, z=512)
         else:
-            self._convs = TEncoder(channel_in=chan_in, ch=32, z=512, activation=activation)
+            # self._convs = TEncoder(channel_in=chan_in, ch=32, z=512, div=model_config['custom_model_config']['div'])
+            self._convs = TEncoder(channel_in=chan_in, ch=32, z=512)
 
 
         #if 'e2e' not in model_config['custom_model_config']['backbone'] and model_config['custom_model_config']['backbone'] != 'random':

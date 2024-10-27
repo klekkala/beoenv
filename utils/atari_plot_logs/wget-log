@@ -1,0 +1,11 @@
+--2024-01-25 22:59:04--  https://doc-10-6k-sheets.googleusercontent.com/export/b2mq9i8dnunrsrpncf7a8kh49g/i5ro4omo646hrs08fdsa42771s/1706252330000/110238110541249485810/113550619222411859150/18pRyt8wYsAEAop2X13Wqv3XlnxVIJATyCMmjbxLxNfE?format=csv
+Resolving doc-10-6k-sheets.googleusercontent.com (doc-10-6k-sheets.googleusercontent.com)... 142.250.217.129, 2607:f8b0:4007:818::2001
+Connecting to doc-10-6k-sheets.googleusercontent.com (doc-10-6k-sheets.googleusercontent.com)|142.250.217.129|:443... connected.
+HTTP request sent, awaiting response... 302 Moved Temporarily
+Location: https://accounts.google.com/ServiceLogin?service=wise&passive=1209600&osid=1&continue=https://doc-10-6k-sheets.googleusercontent.com/export/b2mq9i8dnunrsrpncf7a8kh49g/i5ro4omo646hrs08fdsa42771s/1706252330000/110238110541249485810/113550619222411859150/18pRyt8wYsAEAop2X13Wqv3XlnxVIJATyCMmjbxLxNfE?format%3Dcsv&followup=https://doc-10-6k-sheets.googleusercontent.com/export/b2mq9i8dnunrsrpncf7a8kh49g/i5ro4omo646hrs08fdsa42771s/1706252330000/110238110541249485810/113550619222411859150/18pRyt8wYsAEAop2X13Wqv3XlnxVIJATyCMmjbxLxNfE?format%3Dcsv&ltmpl=sheets [following]
+--2024-01-25 22:59:04--  https://accounts.google.com/ServiceLogin?service=wise&passive=1209600&osid=1&continue=https://doc-10-6k-sheets.googleusercontent.com/export/b2mq9i8dnunrsrpncf7a8kh49g/i5ro4omo646hrs08fdsa42771s/1706252330000/110238110541249485810/113550619222411859150/18pRyt8wYsAEAop2X13Wqv3XlnxVIJATyCMmjbxLxNfE?format%3Dcsv&followup=https://doc-10-6k-sheets.googleusercontent.com/export/b2mq9i8dnunrsrpncf7a8kh49g/i5ro4omo646hrs08fdsa42771s/1706252330000/110238110541249485810/113550619222411859150/18pRyt8wYsAEAop2X13Wqv3XlnxVIJATyCMmjbxLxNfE?format%3Dcsv&ltmpl=sheets
+Resolving accounts.google.com (accounts.google.com)... 142.251.2.84, 2607:f8b0:4023:c0d::54
+Connecting to accounts.google.com (accounts.google.com)|142.251.2.84|:443... connected.
+HTTP request sent, awaiting response... 400 Bad Request
+2024-01-25 22:59:05 ERROR 400: Bad Request.
+

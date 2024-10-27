@@ -107,13 +107,19 @@ if __name__ == '__main__':
         suitable = round(max_len/100)
         times=[round(number / suitable) * suitable for number in times]
         times=[i/60 for i in times]
+        if max(times)<412.5:
+            max_indices = [i for i, v in enumerate(times) if v == max(times)]
+            max_v = [values[i] for i in max_indices]
+            mean_v = sum(max_v)/len(max_v)
+            while max(times)<412.5:
+                times.append(max(times)+suitable)
+                values.append(mean_v)
         data={'Compute Time (in minutes)':times, 'Reward':values}    
         data = pd.DataFrame(data)
         ax = sns.lineplot(data=data,x='Compute Time (in minutes)', y='Reward',label=name)
-        if max(times)<115:
-            print(max(values))
-            line_color = ax.lines[1].get_c()
-            ax.hlines(y=452.54998779296875, xmin=114.63333333333334, xmax=412.5, colors=line_color, linestyles='dashed', label=name)
+        # if max(times)<115:
+        #     line_color = ax.lines[1].get_c()
+        #     ax.hlines(y=466.54998779296875, xmin=114.63333333333334, xmax=412.5, colors=line_color, linestyles='dashed', label=name)
         fig = ax.get_figure()
     # out = os.path.join(output_dir,f'{game_name}.png')
     fig.savefig(output_dir)

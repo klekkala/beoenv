@@ -9,9 +9,7 @@ import math, argparse, csv, copy, time, os
 from pathlib import Path
 #import graph_tool.all as gt
 import argparse
-from IPython import embed
 import ray
-from ray.rllib.utils.annotations import override
 from ray import air, tune
 from ray.tune.schedulers import PopulationBasedTraining
 from ray.rllib.algorithms.ppo import PPO
@@ -43,12 +41,15 @@ if __name__ == "__main__":
     #if args.env_name == "beogym":
     #    args.temporal = "lstm"
     
+    #if args.set == "CarnivalNoFrameskip-v4":
+    #    args.horizon = 475
+
     #log directory
+
     suffix = datetime.datetime.now().strftime("%y_%m_%d_%H_%M_%S")
-    str_logger = args.prefix + "_" + args.set + "_" + args.setting + "_" + args.shared + "_" + args.backbone + "_" + args.policy + "_" + str(args.kl_coeff) + "_" + str(args.buffer_size) + "_" + str(args.batch_size) + "_" + args.temporal + "/" + suffix
+    str_logger = args.prefix + "_" + args.set + "_" + args.setting + "_" + args.shared + "_" + args.backbone + "_" + args.policy + "_" + str(args.kl_coeff) + "_" + str(args.buffer_size) + "_" + str(args.batch_size) + "_" + str(args.div) + "_" + str(args.horizon) + "_" + args.temporal + "/" + suffix
 
     #training, once finished, save the logs
-    
 
     #if the policy/adapter/policy+adapter is swappable
 
@@ -59,6 +60,7 @@ if __name__ == "__main__":
 
 
     if args.train:
+        print('ssa')
 
         #if the program is run for all the games independently
         #and so you run the training procedure independently across all the games
@@ -66,6 +68,8 @@ if __name__ == "__main__":
             #get the list of train or test environments from args.trainset
             if args.env_name == 'beogym':
                 train.beogym_single_train(str_logger)
+            elif args.env_name == 'colosseum':
+                train.colo_single_train(str_logger)
             else:
                 train.single_train(str_logger)
 

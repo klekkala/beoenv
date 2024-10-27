@@ -59,6 +59,9 @@ elif args.env_name == "beogym":
 if args.backbone == "e2e":
     args.train_backbone = True
 
+#if args.set == "CarnivalNoFrameskip-v4":
+#    args.horizon = 475
+
 atari_config = {
     "env" : args.env_name,
     "clip_rewards" : True,
@@ -76,12 +79,12 @@ atari_config = {
         "vf_share_layers": True,
         "conv_filters": [[16, [8, 8], 4], [32, [4, 4], 2], [512, [11, 11], 1],],
         "conv_activation" : "relu" if (args.temporal == '4stack' or args.temporal == 'notemp') else "elu",
-        "custom_model_config" : {"backbone": args.backbone, "backbone_path": args.ckpt + args.env_name + "/" + args.backbone, "train_backbone": args.train_backbone, 'temporal': args.temporal},
+        "custom_model_config" : {"backbone": args.backbone, "backbone_path": args.ckpt + args.env_name + "/" + args.backbone, "train_backbone": args.train_backbone, 'temporal': args.temporal, "div": args.div},
         "framestack": args.temporal == '4stack',
         "use_lstm": args.temporal == 'lstm',
         "use_attention": args.temporal == 'attention',
     },
-    "horizon": 4650,
+    "horizon": args.horizon,
     "kl_coeff" : args.kl_coeff,
     "clip_param" : args.clip_param,
     "entropy_coeff" : args.entropy_coeff,
@@ -133,4 +136,33 @@ beogym_config = {
     "num_cpus_per_worker":args.cpus_worker
     }
 
-
+colo_config = {
+    "env" : args.env_name,
+    "framework" : "torch",
+    "logger_config": {
+        "type": UnifiedLogger,
+        "logdir": os.path.expanduser(args.log)
+        },
+    "observation_filter":"NoFilter",
+    "num_workers": args.num_workers,
+    "rollout_fragment_length" : 1000,
+    "num_envs_per_worker" : 1,
+    'model':{
+                "custom_model": "model",
+                "vf_share_layers": True,
+                "conv_filters": [[16, [8, 8], 4], [32, [4, 4], 2], [512, [11, 11], 1]],
+                "conv_activation":'relu',
+                "post_fcnet_hiddens":[],
+            },
+    "kl_coeff" : args.kl_coeff,
+    "clip_param" : 0.1,
+    "entropy_coeff" : 0.01,
+    "vf_clip_param" : 10.0,
+    "train_batch_size":20000,
+    "sgd_minibatch_size":2000,
+    "num_sgd_iter": 10,
+    "lr" : args.lr,
+    "num_gpus":args.num_gpus,
+    "num_gpus_per_worker" : args.gpus_worker,
+    "num_cpus_per_worker":args.cpus_worker
+    }

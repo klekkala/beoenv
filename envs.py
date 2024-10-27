@@ -1,4 +1,6 @@
 import gym
+import rlbench
+import gymnasium
 from ray.rllib.algorithms.callbacks import DefaultCallbacks
 from ray.rllib.evaluation import Episode, RolloutWorker
 from ray.rllib.env import BaseEnv
@@ -11,17 +13,44 @@ import cv2
 import random
 import string
 from ray.rllib.policy.sample_batch import SampleBatch
-from ray.rllib.env.wrappers.atari_wrappers import FrameStack, WarpFrame, NoopResetEnv, MonitorEnv, MaxAndSkipEnv, FireResetEnv
+from ray.rllib.env.wrappers.atari_wrappers import FrameStack, ScaledFloatFrame, WarpFrame, NoopResetEnv, MonitorEnv, MaxAndSkipEnv, FireResetEnv
 import ray
+from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize
 from IPython import embed
 #import graph_tool.all as gt
 from ray import air, tune
 from ray.rllib.algorithms.algorithm import Algorithm
 from ray.rllib.policy.policy_template import build_policy_class
 from ray.rllib.policy.sample_batch import SampleBatch
+from gym import spaces
+from ray.rllib.utils.images import rgb2gray, resize
+# import vc_models
+# from vc_models.models.vit import model_utils
+try:
+    from torchvision.transforms import InterpolationMode
+    BICUBIC = InterpolationMode.BICUBIC
+except ImportError:
+    BICUBIC = Image.BICUBIC
 
 #from beogym.beogym import BeoGym
 ##SingleTask, MultiTask, MultiEnv classes and their related classes/functions
+
+
+def _convert_image_to_rgb(image):
+    return image.convert("RGB")
+
+_transform = Compose([
+            Resize(224, interpolation=BICUBIC),
+            CenterCrop(224),
+            _convert_image_to_rgb,
+            ToTensor(),
+            Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
+            ])
+
+import torchvision.transforms as T
+_transforms = T.Compose([T.Resize(256),
+    T.CenterCrop(224),
+    T.ToTensor()])
 
 
 def wrap_custom(env, dim=84, framestack=True):
@@ -41,8 +70,10 @@ def wrap_custom(env, dim=84, framestack=True):
 
     if "FIRE" in env.unwrapped.get_action_meanings():
         env = FireResetEnv(env)
+    
     env = WarpFrame(env, dim)
-    # env = ScaledFloatFrame(env)  # TODO: use for dqn?
+
+    #env = ScaledFloatFrame(env)  # TODO: use for dqn?
     # env = ClipRewardEnv(env)  # reward clipping is handled by policy eval
     # 4x image framestacking.
     if framestack is True:
@@ -79,12 +110,12 @@ from PIL import Image
 
 class SingleAtariEnv(gym.Env):
     def __init__(self, env_config):
-        #if env_config['framestack']:
+
         self.env = wrap_custom(gym.make(env_config['env'], full_action_space=env_config['full_action_space']), framestack=env_config['framestack'])
 
         self.action_space = self.env.action_space
         self.observation_space = self.env.observation_space
-
+    
     def reset(self, **kwargs):
         return self.env.reset(**kwargs)
 
@@ -151,14 +182,45 @@ class SingleBeoEnv(gym.Env):
         from beogym.beogym import BeoGym
         self.env = BeoGym({'city':env_config['env'], 'data_path':env_config['data_path']})
         self.action_space = self.env.action_space
+        self.e_model = env_config['e_model']
         self.observation_space = self.env.observation_space
-
+        self.tran=None
+        if "clip" in self.e_model:
+            self.observation_space = gym.spaces.Dict(
+                {"obs": gym.spaces.Box(low=-5.0, high=5.0, shape=(3, 224, 224), dtype=np.float32),
+                "aux": gym.spaces.Box(-1, 1, shape=(2,), dtype=np.float32)})
+        elif 'r3m' in self.e_model or 'mvp' in self.e_model:
+            self.observation_space = gym.spaces.Dict(
+                {"obs": gym.spaces.Box(low=-5.0, high=5.0, shape=(3, 224, 224), dtype=np.float32),
+                "aux": gym.spaces.Box(-1, 1, shape=(2,), dtype=np.float32)})
+        elif 'vc1' in self.e_model:
+            _,_,self.tran,_ = model_utils.load_model(model_utils.VC1_BASE_NAME)
+            self.observation_space = gym.spaces.Dict(
+                {"obs": gym.spaces.Box(low=-5.0, high=5.0, shape=(3, 224, 224), dtype=np.float32),
+                "aux": gym.spaces.Box(-1, 1, shape=(2,), dtype=np.float32)})
+    
     def reset(self, seed=None, options=None):
-        return self.env.reset()
+        step_output = self.env.reset()
+        if "clip" in self.e_model:
+            step_output['obs'] = _transform(Image.fromarray(step_output['obs'])).numpy()
+        elif 'r3m' in self.e_model or 'mvp' in self.e_model:
+            step_output['obs'] = _transforms(Image.fromarray(step_output['obs'])).reshape(3, 224, 224).numpy()
+        elif 'vc1' in self.e_model:
+            step_output['obs'] = self.tran(Image.fromarray(step_output['obs'])).reshape(3, 224, 224).numpy()
+        return step_output
 
 
     def step(self, action):
-        return self.env.step(action)
+        step_output = self.env.step(action)
+        if "clip" in self.e_model:
+            step_output[0]['obs'] = _transform(Image.fromarray(step_output[0]['obs'])).numpy()
+        elif 'r3m' in self.e_model or 'mvp' in self.e_model:
+            step_output[0]['obs'] = _transforms(Image.fromarray(step_output[0]['obs'])).reshape(3, 224, 224).numpy()
+        elif 'vc1' in self.e_model or 'mvp' in self.e_model:
+            step_output[0]['obs'] = self.tran(Image.fromarray(step_output[0]['obs'])).reshape(3, 224, 224).numpy()
+        # elif 'vc-1' in self.e_model:
+        #     step_output['obs'] = vc_transform(Image.fromarray(step_output['obs'])).reshape(3, 224, 224).numpy()
+        return step_output
 
 
 class MultiBeoEnv(MultiAgentEnv):
@@ -205,3 +267,60 @@ beogym = {'single': SingleBeoEnv, 'multi': MultiBeoEnv}
 
 
 
+class SingleColoEnv(gym.Env):
+    def __init__(self, env_config):
+        self.step_count = 0
+        self.env = gymnasium.make(env_config['env'], render_mode="rgb_array")
+        #self.action_space = gym.spaces.Box(-1.0, 1.0, (8,), np.float32)
+        self.action_space = gym.spaces.Box(
+            np.array([-0.1, -0.1, -0.1, -0.1, -0.1, -0.1, -0.1, 0.0]),
+            np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.04]),
+            dtype=np.float32)
+        # self.observation_space = self.env.observation_space
+        if env_config['env'] == 'rlbench/slide_block_to_target-vision-v0':
+            self.observation_space = gym.spaces.Box(0, 255, (3, 84, 84), np.uint8)
+            #self.observation_space = gym.spaces.Dict({'front_rgb': gym.spaces.Box(0, 255, (3, 84, 84), np.uint8), 'gripper_joint_positions': gym.spaces.Box(-np.inf, np.inf, (2,), np.float32), 'gripper_open': gym.spaces.Box(-np.inf, np.inf, (1,), np.float32), 'gripper_pose': gym.spaces.Box(-np.inf, np.inf, (7,), np.float32), 'gripper_touch_forces': gym.spaces.Box(-np.inf, np.inf, (6,), np.float32), 'joint_forces': gym.spaces.Box(-np.inf, np.inf, (7,), np.float32), 'joint_positions': gym.spaces.Box(-np.inf, np.inf, (7,), np.float32), 'joint_velocities': gym.spaces.Box(-np.inf, np.inf, (7,), np.float32), 'left_shoulder_rgb': gym.spaces.Box(0, 255, (128, 128, 3), np.uint8), 'right_shoulder_rgb': gym.spaces.Box(0, 255, (128, 128, 3), np.uint8), 'task_low_dim_state': gym.spaces.Box(-np.inf, np.inf, (6,), np.float32), 'wrist_rgb': gym.spaces.Box(0, 255, (128, 128, 3), np.uint8)})
+    
+        # self.observation_space = gym.spaces.Dict({'front_rgb': gym.spaces.Box(0, 255, (3, 128, 128), np.uint8), 'gripper_joint_positions': gym.spaces.Box(-np.inf, np.inf, (2,), np.float32), 'gripper_open': gym.spaces.Box(-np.inf, np.inf, (1,), np.float32), 'gripper_pose': gym.spaces.Box(-np.inf, np.inf, (7,), np.float32), 'gripper_touch_forces': gym.spaces.Box(-np.inf, np.inf, (6,), np.float32), 'joint_forces': gym.spaces.Box(-np.inf, np.inf, (7,), np.float32), 'joint_positions': gym.spaces.Box(-np.inf, np.inf, (7,), np.float32), 'joint_velocities': gym.spaces.Box(-np.inf, np.inf, (7,), np.float32), 'left_shoulder_rgb': gym.spaces.Box(0, 255, (128, 128, 3), np.uint8), 'right_shoulder_rgb': gym.spaces.Box(0, 255, (128, 128, 3), np.uint8), 'task_low_dim_state': gym.spaces.Box(-np.inf, np.inf, (6,), np.float32), 'wrist_rgb': gym.spaces.Box(0, 255, (128, 128, 3), np.uint8)})
+        print(env_config['env'])
+        if env_config['env'] == 'rlbench/open_drawer-vision-v0':
+            self.observation_space = gym.spaces.Box(0, 255, (3, 84, 84), np.uint8)
+            #self.observation_space = gym.spaces.Dict({'front_rgb': gym.spaces.Box(0, 255, (3, 84, 84), np.uint8), 'gripper_joint_positions': gym.spaces.Box(-np.inf, np.inf, (2,), np.float32), 'gripper_open': gym.spaces.Box(-np.inf, np.inf, (1,), np.float32), 'gripper_pose': gym.spaces.Box(-np.inf, np.inf, (7,), np.float32), 'gripper_touch_forces': gym.spaces.Box(-np.inf, np.inf, (6,), np.float32), 'joint_forces': gym.spaces.Box(-np.inf, np.inf, (7,), np.float32), 'joint_positions': gym.spaces.Box(-np.inf, np.inf, (7,), np.float32), 'joint_velocities': gym.spaces.Box(-np.inf, np.inf, (7,), np.float32), 'left_shoulder_rgb': gym.spaces.Box(0, 255, (128, 128, 3), np.uint8), 'right_shoulder_rgb': gym.spaces.Box(0, 255, (128, 128, 3), np.uint8), 'task_low_dim_state': gym.spaces.Box(-np.inf, np.inf, (57,), np.float32), 'wrist_rgb': gym.spaces.Box(0, 255, (128, 128, 3), np.uint8)})
+        if env_config['env'] == 'rlbench/reach_target-vision-v0':
+            
+            self.observation_space = gym.spaces.Box(0, 255, (3, 84, 84), np.uint8)
+            print("*****************Observtion****", self.observation_space)
+            print("**********************action********", self.action_space)
+            #self.observation_space = gym.spaces.Dict({'front_rgb': gym.spaces.Box(0, 255, (3, 84, 84), np.uint8), 'gripper_joint_positions': gym.spaces.Box(-np.inf, np.inf, (2,), np.float32), 'gripper_open': gym.spaces.Box(-np.inf, np.inf, (1,), np.float32), 'gripper_pose': gym.spaces.Box(-np.inf, np.inf, (7,), np.float32), 'gripper_touch_forces': gym.spaces.Box(-np.inf, np.inf, (6,), np.float32), 'joint_forces': gym.spaces.Box(-np.inf, np.inf, (7,), np.float32), 'joint_positions': gym.spaces.Box(-np.inf, np.inf, (7,), np.float32), 'joint_velocities': gym.spaces.Box(-np.inf, np.inf, (7,), np.float32), 'left_shoulder_rgb': gym.spaces.Box(0, 255, (128, 128, 3), np.uint8), 'right_shoulder_rgb': gym.spaces.Box(0, 255, (128, 128, 3), np.uint8), 'task_low_dim_state': gym.spaces.Box(-np.inf, np.inf, (3,), np.float32), 'wrist_rgb': gym.spaces.Box(0, 255, (128, 128, 3), np.uint8)})
+    
+    def reset(self, **kwargs):
+        obs, _ = self.env.reset(**kwargs)
+        #obs['front_rgb'] = obs['front_rgb'].reshape(3, 84, 84)
+        #obs['front_rgb'] = np.array(Image.fromarray(obs['front_rgb'].astype(np.uint8)).resize((84, 84)))
+        obs['front_rgb'] = np.moveaxis(obs['front_rgb'], -1, 0)
+        #obs['front_rgb'] = _transforms(Image.fromarray(obs['front_rgb'])).reshape(3, 224, 224).numpy()
+        self.step_count = 0
+        return obs['front_rgb']
+
+    def step(self, action):
+        obs, reward, terminate, _, _ = self.env.step(action)
+        #print(obs)
+        #from PIL import Image
+        #im = Image.fromarray(obs['front_rgb'])
+        #im.save("test.jpeg")
+        
+        #obs['front_rgb'] = np.array(Image.fromarray(obs['front_rgb'].astype(np.uint8)).resize((84, 84)))
+        
+        self.step_count += 1
+        #print(reward)
+        
+        if self.step_count > 200:
+            terminate = True
+        
+
+
+        # obs['front_rgb'] = _transforms(Image.fromarray(obs['front_rgb'])).reshape(3, 224, 224).numpy()
+        obs['front_rgb'] = np.moveaxis(obs['front_rgb'], -1, 0)
+        return obs['front_rgb'], reward, terminate, _
+
+colosseum = {'single': SingleColoEnv}

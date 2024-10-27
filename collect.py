@@ -46,10 +46,10 @@ dparser.add_argument(
     "--stop_timesteps", type=int, default=1000000, help="Number of timesteps to train."
 )
 dparser.add_argument(
-    "--dpath", type=str, default="/lab/tmpig10f/kiran/trained_1chan_", help="Number of timesteps to train."
+    "--dpath", type=str, default="/lab/tmpig14c/kiran/expert_notemp_atariucharcolorrllib/expert_notemp_", help="Number of timesteps to train."
 )
 dparser.add_argument(
-    "--game", type=str, default="", help="machine to be training"
+    "--game", type=str, default="DemonAttackNoFrameskip-v4", help="machine to be training"
 )
 
 args = dparser.parse_args()
@@ -57,25 +57,25 @@ args = dparser.parse_args()
 
 ModelCatalog.register_custom_model("model", SingleAtariModel)
 
+"""
 choices = {
-    'DemonAttackNoFrameskip-v4': ('demonattack', '/lab/kiran/logs/rllib/atari/notemp/1.a_DemonAttackNoFrameskip-v4_singlegame_full_1CHAN_VIP_ATARI_EXPERT_1CHAN_DEMONATTACK_STANDARD_150_0.95_32_0_0.0001_7.pt_PolicyNotLoaded_0.0_20000_2000_notemp/23_09_27_20_12_50/checkpoint/'),
-}
+    'DemonAttackNoFrameskip-v4': ('demonattack', '/lab/kiran/logs/rllib/atari/4stack/DemonAttackNoFrameskip-v4/1.a_DemonAttackNoFrameskip-v4_singlegame_full_e2e_PolicyNotLoaded_0.0_20000_2000_4stack/24_01_09_00_46_58/checkpoint/'),
+    'SpaceInvadersNoFrameskip-v4': ('spaceinvaders', '/lab/kiran/logs/rllib/atari/4stack/SpaceInvadersNoFrameskip-v4/1.a_SpaceInvadersNoFrameskip-v4_singlegame_full_e2e_PolicyNotLoaded_0.0_20000_2000_4stack/24_01_06_17_55_54/checkpoint/')
+    }
 
 """
 choices = {
-    'CarnivalNoFrameskip-v4': ('carnival', '/lab/kiran/logs/rllib/atari/4stack/1.a_CarnivalNoFrameskip-v4_singlegame_full_4STACK_CONT_ATARI_EXPERT_4STACK_TRAIN_RESNET_0.1_0.01_512_512.pt_PolicyNotLoaded_0.0_20000_2000_4stack/23_08_07_18_30_07/checkpoint/'),
-    'DemonAttackNoFrameskip-v4': ('demonattack', '/lab/kiran/logs/rllib/atari/4stack/1.a_DemonAttackNoFrameskip-v4_singlegame_full_4STACK_CONT_ATARI_EXPERT_4STACK_TRAIN_RESNET_0.1_0.01_512_512.pt_PolicyNotLoaded_0.0_20000_2000_4stack/23_08_06_09_12_11/checkpoint/'),
-    'AirRaidNoFrameskip-v4': ('airraid', '/lab/kiran/logs/rllib/atari/4stack/1.a_AirRaidNoFrameskip-v4_singlegame_full_4STACK_CONT_ATARI_EXPERT_4STACK_TRAIN_RESNET_0.1_0.01_512_512.pt_PolicyNotLoaded_0.0_20000_2000_4stack/23_08_06_01_30_05/checkpoint/'),
-    'NameThisGameNoFrameskip-v4': ('namethisgame', '/lab/kiran/logs/rllib/atari/4stack/1.a_NameThisGameNoFrameskip-v4_singlegame_full_4STACK_CONT_ATARI_EXPERT_4STACK_TRAIN_RESNET_0.1_0.01_512_512.pt_PolicyNotLoaded_0.0_20000_2000_4stack/23_08_06_09_14_07/checkpoint/'),
-    'SpaceInvadersNoFrameskip-v4': ('spaceinvaders', '/lab/kiran/logs/rllib/atari/4stack/1.a_SpaceInvadersNoFrameskip-v4_singlegame_full_4STACK_CONT_ATARI_EXPERT_4STACK_TRAIN_RESNET_0.1_0.01_512_512.pt_PolicyNotLoaded_0.0_20000_2000_4stack/23_08_06_09_16_00/checkpoint/')
-}
-"""
+    'DemonAttackNoFrameskip-v4': ('demonattack', '/lab/kiran/logs/rllib/atari/notemp/DemonAttackNoFrameskip-v4/1.a_DemonAttackNoFrameskip-v4_singlegame_full_e2e_PolicyNotLoaded_0.0_20000_2000_notemp/24_01_14_21_48_45/checkpoint/'),
+    'SpaceInvadersNoFrameskip-v4': ('spaceinvaders', '/lab/kiran/logs/rllib/atari/notemp/SpaceInvadersNoFrameskip-v4/1.a_SpaceInvadersNoFrameskip-v4_singlegame_full_e2e_PolicyNotLoaded_0.0_20000_2000_notemp/23_10_17_18_44_06/checkpoint/')
+    }
+
 encodernet = Policy.from_checkpoint(choices[args.game][1])
 
 
 
 env = SingleAtariEnv({'env': args.game, 'full_action_space': False, 'framestack': '4stack' in choices[args.game][1]})
 
+print('framestack is', '4stack' in choices[args.game][1])
 obs_np = []
 act_np = []
 rew_np = []
@@ -87,6 +87,7 @@ while True:
     total=0
     obs = env.reset()
     while True:
+        obs = (obs*255).astype(np.uint8)
         action = encodernet.compute_single_action(obs)[0]
         
         obs_np.append(obs)
@@ -108,67 +109,12 @@ while True:
 
 
 
-np.save(args.dpath + choices[args.game][0] + '/observation', np.array(obs_np))
-np.save(args.dpath + choices[args.game][0] + '/action', np.array(act_np))
-np.save(args.dpath + choices[args.game][0] + '/reward', np.array(rew_np))
-np.save(args.dpath + choices[args.game][0] + '/terminal', np.array(done_np))
+np.save(args.dpath + choices[args.game][0] + '/5/50/observation', np.array(obs_np))
+np.save(args.dpath + choices[args.game][0] + '/5/50/action', np.array(act_np))
+np.save(args.dpath + choices[args.game][0] + '/5/50/reward', np.array(rew_np))
+np.save(args.dpath + choices[args.game][0] + '/5/50/terminal', np.array(done_np))
 
 
-obs = np.array(obs_np)
-rew = np.array(rew_np)
-act = np.array(act_np)
 ter = np.array(done_np)
-
 ter[-1]=1
-np.save(args.dpath + choices[args.game][0] + '/terminal', ter)
-indices = np.where(ter == 1)
-
-
-slices_a = []
-slices_r = []
-slices_v = []
-slice_epi = []
-slice_limit = [] 
-# Iterate through the indices and add slices to the lists
-start_idx = 0
-count = 0
-prev_idx = -1
-id_dict = {}
-for idx in indices[0]:
-    slices_a.append(act[start_idx:idx+1])
-    slices_r.append(rew[start_idx:idx+1])
-    slice_epi += [count]*(idx - (prev_idx+1) + 1)
-    slice_limit += [idx]*(idx - (prev_idx+1) + 1)
-    id_dict[count] = start_idx
-    #print(prev_idx, idx, len(slice_limit))
-    assert(len(slice_epi) == len(slice_limit) == idx+1)
-    assert(ter[len(slice_epi)-1] == 1)
-    assert(ter[slice_limit[-1]] == 1)
-    prev_idx = idx
-
-    start_idx = idx+1
-    count += 1
-
-print(len(slice_epi))
-slice_epi += [count]*(rew.shape[0] - len(slice_epi))
-slice_limit += [(rew.shape[0]-1)]*(rew.shape[0] - len(slice_limit))
-assert(ter[len(slice_epi)-1] == 1)
-for abcd in range(rew.shape[0]):
-    assert(ter[slice_limit[abcd]] == 1)
-assert(ter[slice_limit[-1]] == 1)
-
-np_epi = np.stack(slice_epi)
-np_limit = np.stack(slice_limit)
-
-#for arr in slices_r:
-#    a=0.95
-#    powers = np.arange(arr.size)
-#    output = np.array([np.sum(arr[i:] * a ** powers[: arr.size - i]) for i in range(arr.size)])
-#    slices_v.append(output)
-
-
-#originally it was episode... instead of limit
-#data1 = np.concatenate(all_val[0], axis=0)
-np.save(args.dpath + choices[args.game][0] + '/limit', np_limit)
-np.save(args.dpath + choices[args.game][0] + '/episode', np_epi)
-np.save(args.dpath + choices[args.game][0] + '/id_dict', id_dict)
+np.save(args.dpath + choices[args.game][0] + '/5/50/terminal', ter)

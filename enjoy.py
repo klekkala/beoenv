@@ -44,6 +44,7 @@ import distutils.dir_util
 from pathlib import Path
 from envs import SingleAtariEnv
 import pickle
+import imageio
 
 ModelCatalog.register_custom_model("model", SingleAtariModel)
 
@@ -62,20 +63,35 @@ ModelCatalog.register_custom_model("model", SingleAtariModel)
 #             break
 
 #encodernet = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/lstm/1.a_DemonAttackNoFrameskip-v4_singlegame_full_e2e_PolicyNotLoaded_0.0_20000_2000_lstm/23_08_16_00_21_36/checkpoint/')
-encodernet = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/notemp/1.a_SpaceInvadersNoFrameskip-v4_singlegame_full_e2e_PolicyNotLoaded_0.0_20000_2000_notemp/23_10_11_15_12_08/checkpoint/')
+# encodernet = Policy.from_checkpoint('/lab/kiran/logs/rllib/atari/notemp/1.a_SpaceInvadersNoFrameskip-v4_singlegame_full_e2e_PolicyNotLoaded_0.0_20000_2000_notemp/23_10_11_15_12_08/checkpoint/')
+
+#carnival
+
+encodernet = Policy.from_checkpoint('/lab/tmpig10c/kiran/Dropbox/logs/rllib/atari/notemp/CarnivalNoFrameskip-v4/VEP/1.a_CarnivalNoFrameskip-v4_singlegame_full_1CHAN_NVEP_ATARI_EXPERT_1CHAN_SPACEDEMO_STANDARD_1.0_0.1_1.0_same_32_0_0.0001_0.pt_PolicyNotLoaded_0.0_20000_2000_notemp/23_11_16_14_25_16/checkpoint')
+#Beam
+encodernet = Policy.from_checkpoint('/lab/tmpig10c/kiran/Dropbox/logs/rllib/atari/notemp/BeamRiderNoFrameskip-v4/VEP/1.a_BeamRiderNoFrameskip-v4_singlegame_full_1CHAN_NVEP_ATARI_EXPERT_1CHAN_SPACEDEMO_STANDARD_2.0_-1.0_2.0_same_triplet_32_0_0.0001_1.pt_PolicyNotLoaded_0.0_20000_2000_1.0_notemp/24_01_22_18_26_19/checkpoint')
+#Phoenix
+encodernet = Policy.from_checkpoint('/lab/tmpig10c/kiran/Dropbox/logs/rllib/atari/notemp/PhoenixNoFrameskip-v4/VEP/1.a_PhoenixNoFrameskip-v4_singlegame_full_1CHAN_NVEP_ATARI_EXPERT_1CHAN_SPACEDEMO_STANDARD_2.0_-1.0_2.0_same_triplet_32_0_0.0001_1.pt_PolicyNotLoaded_0.0_20000_2000_1.0_notemp/24_01_19_21_41_55/checkpoint')
+#Demon
+encodernet = Policy.from_checkpoint('/lab/tmpig10c/kiran/Dropbox/logs/rllib/atari/notemp/DemonAttackNoFrameskip-v4/VEP/1.a_DemonAttackNoFrameskip-v4_singlegame_full_1CHAN_NVEP_ATARI_EXPERT_1CHAN_SPACEDEMO_STANDARD_2.0_-1.0_2.0_same_triplet_32_0_0.0001_1.pt_PolicyNotLoaded_0.0_20000_2000_1.0_notemp/24_01_17_10_36_52/checkpoint')
+#Space
+encodernet = Policy.from_checkpoint('/lab/tmpig10c/kiran/Dropbox/logs/rllib/atari/notemp/SpaceInvadersNoFrameskip-v4/VEP/1.a_SpaceInvadersNoFrameskip-v4_singlegame_full_1CHAN_NVEP_ATARI_EXPERT_1CHAN_SPACEDEMO_STANDARD_4.0_-1.0_4.0_same_triplet_32_0_0.0001_1.pt_PolicyNotLoaded_0.0_20000_2000_1.0_notemp/24_01_18_12_45_25/checkpoint')
+
 
 args = get_args()
 print(args.log + "/" + args.temporal + "/" + args.backbone + "/checkpoint/")
 
 res=[]
-rounds=20
+rounds=1
 
-env = SingleAtariEnv({'env': 'SpaceInvadersNoFrameskip-v4', 'full_action_space': False, 'framestack': args.temporal == '4stack'})
+# env = SingleAtariEnv({'env': 'SpaceInvadersNoFrameskip-v4', 'full_action_space': False, 'framestack': args.temporal == '4stack'})
+env = SingleAtariEnv({'env': 'SpaceInvadersNoFrameskip-v4', 'full_action_space': False, 'framestack': '1chan'})
 
 obs_np = []
 act_np = []
 rew_np = []
 done_np = []
+frames = []
 
 count = 0
 for i in range(rounds):
@@ -87,7 +103,8 @@ for i in range(rounds):
         action = encodernet.compute_single_action(obs)[0]
         
         obs_np.append(obs)
-        
+        frame = np.uint8(cv2.resize(obs, (384, 384), interpolation=cv2.INTER_CUBIC))  # Convert frame to np.uint8
+        frames.append(frame)
         obs, reward, done, _ = env.step(action)
         
         act_np.append(action)
@@ -102,6 +119,8 @@ for i in range(rounds):
 
 average = sum(res) / len(res)
 print(average)
+
+imageio.mimsave('./atari_v/SpaceInvadersNoFrameskip-v4.gif', frames, fps=30)  # Change 'animation.gif' to your desired file name and path
 
 
 # import cv2

@@ -31,7 +31,6 @@ from ray.rllib.policy.sample_batch import SampleBatch
 from ray.rllib.evaluation import Episode, RolloutWorker
 from ray.rllib.algorithms.algorithm_config import AlgorithmConfig
 from models.atarimodels import SingleAtariModel, SharedBackboneAtariModel, SharedBackbonePolicyAtariModel, AtariCNNV2PlusRNNModel
-from models.beogymmodels import SingleBeogymModel, BeogymCNNV2PlusRNNModel, FrozenBackboneModel, SingleImageModel, ComplexNet
 from ray.rllib.algorithms.ppo import PPOConfig
 from typing import Dict, Tuple
 import gym
@@ -49,6 +48,10 @@ from ray.rllib.utils.typing import AlgorithmConfigDict, ResultDict
 from ray.tune.schedulers import PopulationBasedTraining, pb2
 args = get_args()
 
+if args.env_name == 'beogym':
+    from models.beogymmodels import SingleColModel, SingleBeogymModel, BeogymCNNV2PlusRNNModel, FrozenBackboneModel, SingleImageModel, ComplexNet
+elif args.env_name == 'colosseum':
+    from models.colmodels import SingleColModel, SingleBeogymModel, ComplexNet
 #Only 4 functions
 # each_env
 # seq_env uses each_env in a for loop
@@ -73,9 +76,12 @@ def pick_config_env(str_env):
     elif args.env_name == 'beogym':
         use_config = configs.beogym_config
         use_env = envs.beogym[str_env]
-    elif env_name == 'carla':
+    elif args.env_name == 'carla':
         use_config = configs.carla
         use_env = envs.carla[str_env]
+    elif args.env_name == 'colosseum':
+        use_config = configs.colo_config
+        use_env = envs.colosseum[str_env]
     return use_config, use_env
 
 
@@ -95,9 +101,9 @@ def rllib_loop(config, str_logger):
     #load the config
     #extract data from the config file
     
+
     import socket
     machine = socket.gethostname()
-    
     with open(configs.resource_file + '/' + args.env_name + '.yaml', 'r') as cfile:
         config_data = yaml.safe_load(cfile)
         print(cfile)
@@ -109,18 +115,66 @@ def rllib_loop(config, str_logger):
     #datapaths are not loading properly fix this!
     #if args.machine == 'iGpu11':
     #    args.data_path = '/home2/kiran/'
-    
+    if args.env_name == "colosseum":
+        args.num_envs = 1
     config.update(
-                {"num_workers" : args.num_workers,
-                "num_envs_per_worker" : args.num_envs,
-                "num_gpus" : args.num_gpus, 
-                "num_gpus_per_worker" : args.gpus_worker, 
-                "num_cpus_per_worker": args.cpus_worker,
-                "train_batch_size": args.buffer_size,
-                "sgd_minibatch_size": args.batch_size
-                }
-        )
-    
+                 {"num_workers" : args.num_workers,
+                 "num_envs_per_worker" : args.num_envs,
+                 "num_gpus" : args.num_gpus, 
+                 "num_gpus_per_worker" : args.gpus_worker, 
+                 "num_cpus_per_worker": args.cpus_worker,
+                 "train_batch_size": args.buffer_size,
+                 "sgd_minibatch_size": args.batch_size
+                 }
+         )
+
+    # 15 clip
+    # config.update(
+    #             {"num_workers" : 2,
+    #             "num_envs_per_worker" : 4,
+    #             "num_gpus" : 2, 
+    #             "num_gpus_per_worker" : 1, 
+    #             "num_cpus_per_worker": 4,
+    #             "train_batch_size": 5000,
+    #             "sgd_minibatch_size": args.batch_size
+    #             }
+    #     )
+    # 21 r3m
+    # config.update(
+    #             {"num_workers" : 4,
+    #             "num_envs_per_worker" : 1,
+    #             "num_gpus" : 1, 
+    #             "num_gpus_per_worker" : 0.25, 
+    #             "num_cpus_per_worker": 4,
+    #             "train_batch_size": 2000,
+    #             "sgd_minibatch_size":200
+    #             }
+    #     )
+
+    # #2 mvp
+    # config.update(
+    #             {"num_workers" : 1,
+    #             "num_envs_per_worker" : 1,
+    #             "num_gpus" : 1, 
+    #             "num_gpus_per_worker" : 7, 
+    #             "num_cpus_per_worker": 4,
+    #             "train_batch_size": 2000,
+    #             "sgd_minibatch_size": 200
+    #             }
+    #     )
+
+    # #25 vc1
+    #config.update(
+    #            {"num_workers" : 8,
+    #            "num_envs_per_worker" : 1,
+    #            "num_gpus" : 2, 
+    #            "num_gpus_per_worker" : 2.0/8, 
+    #            "num_cpus_per_worker": 2,
+    #            "train_batch_size": 2000,
+    #            "sgd_minibatch_size": 200
+    #            }
+    #    )
+    #batch size used to be 5000
     if args.env_name=='beogym':
         config['env_config']['data_path']=args.data_path
     
@@ -202,6 +256,7 @@ def rllib_loop(config, str_logger):
 #No Sequential transfer. Single task on all envs.
 #TECHNICALY, TRAINING THE ENTIRE MODEL ON ALL THE ENVIRONMENTS IS ALSO SINGLEENV
 def single_train(str_logger, backbone='e2e', policy=None):
+    
 
     # modify atari_config to incorporate the environments
     #construct the environment from envs.py based on the env_name 
@@ -221,8 +276,24 @@ def single_train(str_logger, backbone='e2e', policy=None):
     else:
         ModelCatalog.register_custom_model("model", SingleAtariModel)
 
-    embed()
+    if "e2e" in args.backbone:
+        predir = "E2E"
+    elif "random" in args.backbone:
+        predir = "Random"
+    elif "VIP" in args.backbone:
+        predir = "VIP"
+    elif "VEP" in args.backbone:
+        predir = "VEP"
+    elif "SOM" in args.backbone:
+        predir = "SOM"
+    elif "TCN" in args.backbone:
+        predir = "TCN"
+    else:
+        raise NotImplementedError
+
+    print("alksjdf;laksjdfijelifjas;ldkjfl;kjl", os.path.expanduser(args.log + '/' + args.env_name + '/' + args.temporal + '/' + args.set + '/' + str_logger))
     #do all the config overwrites here
+    print(env_config)
     use_config.update(
                 {
                     "env" : use_env,
@@ -242,7 +313,7 @@ def single_train(str_logger, backbone='e2e', policy=None):
 def beogym_single_train(str_logger, backbone='e2e', policy=None):
 
     use_config, use_env = pick_config_env('single')
-    env_config = {'env': args.set,'data_path': args.data_path}
+    env_config = {'env': args.set,'data_path': args.data_path, 'e_model': args.backbone}
 
     if args.backbone == "e2e":
         args.train_backbone = True
@@ -283,7 +354,31 @@ def beogym_single_train(str_logger, backbone='e2e', policy=None):
     ModelCatalog.register_custom_model("Single", SingleImageModel)
     ModelCatalog.register_custom_model("FrozenBackboneModel", FrozenBackboneModel)
     ModelCatalog.register_custom_model("ComplexNet", ComplexNet)
-    
+   
+
+    if "e2e" in args.backbone:
+        predir = "E2E"
+    elif "random" in args.backbone:
+        predir = "Random"
+    elif "VIP" in args.backbone:
+        predir = "VIP"
+    elif "VEP" in args.backbone:
+        predir = "VEP"
+    elif "SOM" in args.backbone:
+        predir = "SOM"
+    elif "TCN" in args.backbone:
+        predir = "TCN"
+    elif "clip" in args.backbone:
+        predir = "clip"
+    elif "r3m" in args.backbone:
+        predir = "r3m"
+    elif "mvp" in args.backbone:
+        predir = "mvp"
+    elif "vc1" in args.backbone:
+        predir = "vc1"
+    else:
+        raise NotImplementedError
+
     #do all the config overwrites here
     use_config.update(
                 {
@@ -291,11 +386,11 @@ def beogym_single_train(str_logger, backbone='e2e', policy=None):
                     "env_config": env_config,
                     "logger_config" : {
                         "type": UnifiedLogger,
-                        "logdir": os.path.expanduser(args.log + '/' + args.env_name + '/' + args.temporal + '/' + args.set + '/' + str_logger)
+                        "logdir": os.path.expanduser(args.log + '/' + args.env_name + '/' + args.temporal + '/' + args.set + '/' + predir + '/' + str_logger)
                     },
                     'model':{
                         "custom_model": "ComplexNet",
-                        "custom_model_config" : {"backbone": args.backbone, "backbone_path": args.ckpt + args.env_name + "/" + args.backbone, "train_backbone": args.train_backbone, 'temporal': args.temporal, 'vf_share_layers': True, 'conv_filters': [[16, [8, 8], 4], [32, [4, 4], 2], [512, [11, 11], 1]]},
+                        "custom_model_config" : {"backbone": args.backbone, "backbone_path": args.ckpt + args.env_name + "/" + args.backbone, "train_backbone": args.train_backbone, 'temporal': args.temporal, 'vf_share_layers': True, 'conv_filters': [[16, [8, 8], 4], [32, [4, 4], 2], [512, [11, 11], 1]], "div": args.div},
                         "framestack": False,
                         "use_lstm": False,
                         "vf_share_layers": True,
@@ -306,6 +401,73 @@ def beogym_single_train(str_logger, backbone='e2e', policy=None):
 
     #start the training loop
     rllib_loop(use_config, str_logger)
+
+
+
+def colo_single_train(str_logger, backbone='e2e', policy=None):
+
+    use_config, use_env = pick_config_env('single')
+    env_config = {'env': args.set, 'e_model': args.backbone}
+
+    if args.backbone == "e2e":
+        args.train_backbone = True
+    else:
+        args.train_backbone = False
+    #else:
+    ModelCatalog.register_custom_model("ComplexNet", ComplexNet)
+   
+
+    if "e2e" in args.backbone:
+        predir = "E2E"
+    elif "random" in args.backbone:
+        predir = "Random"
+    elif "VIP" in args.backbone:
+        predir = "VIP"
+    elif "VEP" in args.backbone:
+        predir = "VEP"
+    elif "SOM" in args.backbone:
+        predir = "SOM"
+    elif "TCN" in args.backbone:
+        predir = "TCN"
+    elif "clip" in args.backbone:
+        predir = "clip"
+    elif "r3m" in args.backbone:
+        predir = "r3m"
+    elif "mvp" in args.backbone:
+        predir = "mvp"
+    elif "vc1" in args.backbone:
+        predir = "vc1"
+    elif "vep" in args.backbone:
+        predir = "vep"
+    else:
+        predir = "vep"
+        #raise NotImplementedError
+
+    #do all the config overwrites here
+    use_config.update(
+                {
+                    "env" : use_env,
+                    "env_config": env_config,
+                    "logger_config" : {
+                       "type": UnifiedLogger,
+                       "logdir": os.path.expanduser(args.log + '/' + args.env_name + '/' + args.temporal + '/' + args.set + '/' + str_logger)
+                    },
+                    'model':{
+                        "custom_model": "ComplexNet",
+                        #"custom_model_config" : {'temporal': args.temporal, 'vf_share_layers': True, 'conv_filters': [[16, [8, 8], 4], [32, [4, 4], 2], [512, [11, 11], 1]], "div": args.div},
+                        "custom_model_config" : {"backbone": args.backbone, "backbone_path": "/lab/kiran/ckpts/pretrained/colo/" + args.backbone, "train_backbone": args.train_backbone, 'temporal': args.temporal, 'vf_share_layers': True, 'conv_filters': [[16, [8, 8], 4], [32, [4, 4], 2], [512, [11, 11], 1]], "div": args.div},
+                        "framestack": False,
+                        "use_lstm": False,
+                        "vf_share_layers": True,
+                        "conv_filters": [[16, [8, 8], 4], [32, [4, 4], 2], [512, [11, 11], 1]],
+                    },
+                }
+            )
+
+    #start the training loop
+    rllib_loop(use_config, str_logger)
+
+
 
 
 

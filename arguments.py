@@ -31,7 +31,7 @@ def get_args():
         "--ckpt", type=str, default="/lab/kiran/ckpts/pretrained/", help="directory for saving resources"
     ) 
     parser.add_argument(
-        "--env_name", type=str, default="atari", help="Environment name"
+        "--env_name", type=str, default="colo", help="Environment name"
     )
     parser.add_argument(
         "--set", type=str, default="all", help="ALE/Pong-v5"
@@ -70,10 +70,13 @@ def get_args():
         "--stop_timesteps", type=int, default=25000000, help="Number of timesteps to train."
     )
     parser.add_argument(
+        "--div", type=float, default=1.0, help="Dividing by 1.0 or 255.0"
+    )
+    parser.add_argument(
         "--lr", type=float, default=1e-4, help="Number of timesteps to train."
     )
     parser.add_argument(
-        "--kl_coeff", type=float, default=0.0, help="Number of timesteps to train."
+        "--kl_coeff", type=float, default=1.0, help="Number of timesteps to train."
     )
     parser.add_argument(
         "--clip_param", type=float, default=.1, help="Number of timesteps to train."
@@ -91,6 +94,9 @@ def get_args():
         "--buffer_size", type=int, default=20000, help="Number of timesteps to train."
     )
     parser.add_argument(
+        "--horizon", type=int, default=4650, help="horizon length"
+    )
+    parser.add_argument(
         "--batch_size", type=int, default=2000, help="Number of timesteps to train."
     )
     parser.add_argument(
@@ -105,11 +111,11 @@ def get_args():
     )
     
     parser.add_argument(
-        "--num_gpus", type=float, default=.4, help="Number of GPUs each worker has"
+        "--num_gpus", type=float, default=.1, help="Number of GPUs each worker has"
     )
 
     parser.add_argument(
-        "--gpus_worker", type=float, default=.2, help="Number of GPUs each worker has"
+        "--gpus_worker", type=float, default=.1, help="Number of GPUs each worker has"
     ) 
 
     parser.add_argument(
